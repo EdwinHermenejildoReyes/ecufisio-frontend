@@ -182,7 +182,7 @@ export default function LandingPage() {
               Iniciar sesión
             </Link>
             <Link
-              href="/login"
+              href="/registro"
               className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
             >
               Comenzar gratis
@@ -205,7 +205,7 @@ export default function LandingPage() {
             <a href="#contacto" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-gray-700 px-2 py-2.5 rounded-lg hover:bg-gray-50">Contacto</a>
             <hr className="border-gray-100 my-2" />
             <Link href="/login" className="block text-sm font-medium text-gray-700 px-2 py-2.5 rounded-lg hover:bg-gray-50">Iniciar sesión</Link>
-            <Link href="/login" className="block bg-sky-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold text-center mt-2">Comenzar gratis</Link>
+            <Link href="/registro" className="block bg-sky-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold text-center mt-2">Comenzar gratis</Link>
           </div>
         )}
       </nav>
@@ -236,7 +236,7 @@ export default function LandingPage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-20">
               <Link
-                href="/login"
+                href="/registro"
                 className="inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-8 py-4 rounded-xl text-lg font-bold transition-all hover:scale-105 shadow-lg shadow-sky-600/20"
               >
                 Comenzar gratis
@@ -408,7 +408,7 @@ export default function LandingPage() {
                   ))}
                 </ul>
                 <Link
-                  href="/login"
+                  href={plan.cta === 'Contactar ventas' ? 'mailto:hola@ecufisio.com' : '/registro'}
                   className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${
                     plan.highlighted
                       ? 'bg-white text-sky-600 hover:bg-sky-50'
@@ -439,7 +439,7 @@ export default function LandingPage() {
             Empieza gratis hoy, sin compromisos.
           </p>
           <Link
-            href="/login"
+            href="/registro"
             className="inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-10 py-4 rounded-xl text-lg font-bold transition-all hover:scale-105 shadow-lg shadow-sky-600/20"
           >
             Comenzar gratis — 14 días

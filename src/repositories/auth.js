@@ -4,6 +4,9 @@ export const authRepository = {
   login: (email, password) =>
     api.post('/auth/jwt/create/', { email, password }).then((r) => r.data),
 
+  register: (data) =>
+    api.post('/auth/users/', data).then((r) => r.data),
+
   getMe: () =>
     api.get('/auth/users/me/').then((r) => r.data),
 
