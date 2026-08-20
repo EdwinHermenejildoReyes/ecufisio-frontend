@@ -16,6 +16,18 @@ export const agendaRepository = {
   cancelarCita: (id) =>
     api.post(`/agenda/citas/${id}/cancelar/`).then((r) => r.data),
 
+  confirmarCita: (id) =>
+    api.post(`/agenda/citas/${id}/confirmar/`).then((r) => r.data),
+
+  completarCita: (id) =>
+    api.post(`/agenda/citas/${id}/completar/`).then((r) => r.data),
+
+  resumenHoy: () =>
+    api.get('/agenda/citas/resumen/').then((r) => r.data),
+
+  listarFisioterapeutas: () =>
+    api.get('/agenda/fisioterapeutas/').then((r) => r.data),
+
   disponibilidad: (fisioterapeutaId, fecha) =>
     api.get('/agenda/disponibilidad/', { params: { fisioterapeuta: fisioterapeutaId, fecha } }).then((r) => r.data),
 }
