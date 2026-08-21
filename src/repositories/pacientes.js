@@ -13,6 +13,12 @@ export const pacientesRepository = {
   actualizar: (id, data) =>
     api.patch(`/pacientes/${id}/`, data).then((r) => r.data),
 
-  historial: (id) =>
-    api.get(`/pacientes/${id}/historial/`).then((r) => r.data),
+  desactivar: (id) =>
+    api.post(`/pacientes/${id}/desactivar/`).then((r) => r.data),
+
+  historialCitas: (id, params) =>
+    api.get(`/pacientes/${id}/citas/`, { params }).then((r) => r.data),
+
+  paquetes: (id) =>
+    api.get(`/pacientes/${id}/paquetes/`).then((r) => r.data),
 }
