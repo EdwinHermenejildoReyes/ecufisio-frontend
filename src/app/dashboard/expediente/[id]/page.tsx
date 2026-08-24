@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ChevronLeft, Save, Loader2, AlertCircle, CheckCircle2,
   User, Calendar, Clock, Activity, Plus, Trash2, ChevronDown, ChevronUp,
+  Search, X, ExternalLink,
 } from 'lucide-react'
 import { expedienteRepository } from '@/repositories/expediente'
+import { ejerciciosRepository } from '@/repositories/ejercicios'
 
 /* ── Tipos ── */
 interface EvaluacionPostural {
@@ -38,6 +40,237 @@ interface SesionDetalle {
   escala_dolor_inicio: number | null
   escala_dolor_fin: number | null
   evaluaciones: EvaluacionPostural[]
+}
+
+/* ── Rutina de ejercicios ── */
+interface RutinaItem {
+  id: string
+  sesion: string
+  ejercicio: number
+  ejercicio_nombre: string
+  ejercicio_categoria: string
+  ejercicio_video_url: string
+  series: number | null
+  repeticiones: number | null
+  duracion_segundos: number | null
+  descanso_segundos: number | null
+  instrucciones_especificas: string
+  orden: number
+}
+
+const CAT_COLOR_RUT: Record<string, string> = {
+  fuerza:       'bg-red-100 text-red-700',
+  flexibilidad: 'bg-emerald-100 text-emerald-700',
+  equilibrio:   'bg-blue-100 text-blue-700',
+  cardio:       'bg-orange-100 text-orange-700',
+  funcional:    'bg-violet-100 text-violet-700',
+}
+
+function RutinaEjercicioModal({ sesionId, item, orden, onSaved, onClose }: {
+  sesionId: string
+  item: RutinaItem | null
+  orden: number
+  onSaved: () => void
+  onClose: () => void
+}) {
+  const [ejerciciosBusq, setEjerciciosBusq] = useState<any[]>([])
+  const [q, setQ] = useState('')
+  const [loadingEj, setLoadingEj] = useState(false)
+  const [form, setForm] = useState({
+    ejercicio:               item?.ejercicio ?? (null as number | null),
+    ejercicio_nombre:        item?.ejercicio_nombre ?? '',
+    ejercicio_categoria:     item?.ejercicio_categoria ?? '',
+    series:                  item?.series?.toString() ?? '',
+    repeticiones:            item?.repeticiones?.toString() ?? '',
+    duracion_segundos:       item?.duracion_segundos?.toString() ?? '',
+    descanso_segundos:       item?.descanso_segundos?.toString() ?? '',
+    instrucciones_especificas: item?.instrucciones_especificas ?? '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const debRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  useEffect(() => {
+    clearTimeout(debRef.current)
+    debRef.current = setTimeout(() => {
+      setLoadingEj(true)
+      ejerciciosRepository.listar(q ? { q } : {})
+        .then((data: any) => setEjerciciosBusq(Array.isArray(data) ? data : (data.results ?? [])))
+        .catch(() => setEjerciciosBusq([]))
+        .finally(() => setLoadingEj(false))
+    }, 300)
+  }, [q])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.ejercicio) { setError('Selecciona un ejercicio.'); return }
+    if (!form.series && !form.duracion_segundos) {
+      setError('Especifica series/repeticiones o duración en segundos.')
+      return
+    }
+    setError(null)
+    setSaving(true)
+    try {
+      const payload = {
+        ejercicio: form.ejercicio,
+        series: form.series ? Number(form.series) : null,
+        repeticiones: form.repeticiones ? Number(form.repeticiones) : null,
+        duracion_segundos: form.duracion_segundos ? Number(form.duracion_segundos) : null,
+        descanso_segundos: form.descanso_segundos ? Number(form.descanso_segundos) : null,
+        instrucciones_especificas: form.instrucciones_especificas,
+      }
+      if (item) {
+        await ejerciciosRepository.actualizarRutina(item.id, payload)
+      } else {
+        await ejerciciosRepository.agregarARutina({ ...payload, sesion: sesionId, orden })
+      }
+      onSaved()
+      onClose()
+    } catch (err: any) {
+      const d = err?.response?.data
+      if (d?.non_field_errors) setError(d.non_field_errors[0])
+      else if (d?.detail) setError(d.detail)
+      else setError('No se pudo guardar el ejercicio.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const NUM_INPUT = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-base font-semibold text-gray-900">
+            {item ? 'Editar ejercicio' : 'Agregar ejercicio'}
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          {error && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
+              <AlertCircle className="w-4 h-4 shrink-0" />{error}
+            </div>
+          )}
+
+          {/* Selector de ejercicio */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ejercicio <span className="text-red-400">*</span>
+            </label>
+
+            {form.ejercicio ? (
+              <div className="flex items-center gap-2 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-sky-800">{form.ejercicio_nombre}</p>
+                  {form.ejercicio_categoria && (
+                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${CAT_COLOR_RUT[form.ejercicio_categoria] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {form.ejercicio_categoria}
+                    </span>
+                  )}
+                </div>
+                <button type="button"
+                  onClick={() => setForm({ ...form, ejercicio: null, ejercicio_nombre: '', ejercicio_categoria: '' })}
+                  className="text-sky-400 hover:text-sky-600 p-1">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="relative mb-2">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="Buscar en biblioteca…"
+                    className="pl-9 w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                  />
+                </div>
+                {loadingEj ? (
+                  <div className="text-center py-3"><Loader2 className="w-4 h-4 animate-spin text-sky-500 mx-auto" /></div>
+                ) : (
+                  <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-50">
+                    {ejerciciosBusq.length === 0
+                      ? <p className="text-sm text-gray-400 text-center py-3">Sin ejercicios</p>
+                      : ejerciciosBusq.slice(0, 8).map((ej: any) => (
+                        <button key={ej.id} type="button"
+                          className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-sky-50 transition-colors text-left"
+                          onClick={() => setForm({ ...form, ejercicio: ej.id, ejercicio_nombre: ej.nombre, ejercicio_categoria: ej.categoria })}>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{ej.nombre}</p>
+                            {ej.grupo_muscular_nombre && (
+                              <p className="text-xs text-gray-400">{ej.grupo_muscular_nombre}</p>
+                            )}
+                          </div>
+                          {ej.categoria && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded shrink-0 ${CAT_COLOR_RUT[ej.categoria] ?? 'bg-gray-100 text-gray-600'}`}>
+                              {ej.categoria}
+                            </span>
+                          )}
+                        </button>
+                      ))
+                    }
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Parámetros */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Series</label>
+              <input type="number" min="1" value={form.series}
+                onChange={(e) => setForm({ ...form, series: e.target.value })}
+                placeholder="3" className={NUM_INPUT} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Repeticiones</label>
+              <input type="number" min="1" value={form.repeticiones}
+                onChange={(e) => setForm({ ...form, repeticiones: e.target.value })}
+                placeholder="15" className={NUM_INPUT} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Duración (seg)</label>
+              <input type="number" min="1" value={form.duracion_segundos}
+                onChange={(e) => setForm({ ...form, duracion_segundos: e.target.value })}
+                placeholder="45" className={NUM_INPUT} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Descanso (seg)</label>
+              <input type="number" min="0" value={form.descanso_segundos}
+                onChange={(e) => setForm({ ...form, descanso_segundos: e.target.value })}
+                placeholder="60" className={NUM_INPUT} />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Instrucciones específicas</label>
+            <textarea value={form.instrucciones_especificas}
+              onChange={(e) => setForm({ ...form, instrucciones_especificas: e.target.value })}
+              rows={2} placeholder="Indicaciones particulares para este paciente…"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent resize-none" />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose}
+              className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" disabled={saving}
+              className="flex-1 flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-70">
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {saving ? 'Guardando…' : item ? 'Guardar' : 'Agregar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
 }
 
 /* ── Componentes UI ── */
@@ -414,6 +647,10 @@ export default function SesionDetallePage() {
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
+  const [rutina, setRutina] = useState<RutinaItem[]>([])
+  const [loadingRutina, setLoadingRutina] = useState(true)
+  const [rutinaModal, setRutinaModal] = useState<{ open: boolean; item: RutinaItem | null }>({ open: false, item: null })
+
   const [form, setForm] = useState({
     motivo_consulta: '',
     diagnostico_cie10: '',
@@ -446,6 +683,22 @@ export default function SesionDetallePage() {
   }, [id])
 
   useEffect(() => { cargar() }, [cargar])
+
+  const cargarRutina = useCallback(() => {
+    setLoadingRutina(true)
+    ejerciciosRepository.listarRutina(id)
+      .then((data) => setRutina(Array.isArray(data) ? data : (data.results ?? [])))
+      .catch(() => setRutina([]))
+      .finally(() => setLoadingRutina(false))
+  }, [id])
+
+  useEffect(() => { cargarRutina() }, [cargarRutina])
+
+  const handleDeleteRutina = async (rutinaId: string) => {
+    if (!confirm('¿Eliminar este ejercicio de la rutina?')) return
+    try { await ejerciciosRepository.eliminarDeRutina(rutinaId) } catch {}
+    cargarRutina()
+  }
 
   const set = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -649,6 +902,87 @@ export default function SesionDetallePage() {
             </div>
 
             <NuevaEvaluacionForm sesionId={sesion.id} onCreada={cargar} />
+          </section>
+
+          {/* ── Sección 5: Rutina de ejercicios ── */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                Rutina de ejercicios
+              </h2>
+              <button
+                type="button"
+                onClick={() => setRutinaModal({ open: true, item: null })}
+                className="flex items-center gap-1.5 text-sm text-sky-600 hover:text-sky-700 font-medium"
+              >
+                <Plus className="w-4 h-4" />Agregar
+              </button>
+            </div>
+
+            {loadingRutina ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-sky-500" />
+              </div>
+            ) : rutina.length === 0 ? (
+              <p className="text-sm text-gray-400">Sin ejercicios asignados a esta sesión.</p>
+            ) : (
+              <div className="space-y-2">
+                {rutina.map((item) => (
+                  <div key={item.id}
+                    className="flex items-start gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium text-gray-900">{item.ejercicio_nombre}</p>
+                        {item.ejercicio_categoria && (
+                          <span className="text-xs bg-white border border-gray-200 text-gray-500 px-1.5 py-0.5 rounded">
+                            {item.ejercicio_categoria}
+                          </span>
+                        )}
+                        {item.ejercicio_video_url && (
+                          <a href={item.ejercicio_video_url} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-0.5 text-xs text-sky-500 hover:underline">
+                            <ExternalLink className="w-3 h-3" />Video
+                          </a>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {item.series
+                          ? `${item.series} series${item.repeticiones ? ` × ${item.repeticiones} reps` : ''}`
+                          : item.duracion_segundos ? `${item.duracion_segundos}s` : '—'}
+                        {item.descanso_segundos ? ` · ${item.descanso_segundos}s descanso` : ''}
+                      </p>
+                      {item.instrucciones_especificas && (
+                        <p className="text-xs text-gray-400 mt-0.5 italic">{item.instrucciones_especificas}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setRutinaModal({ open: true, item })}
+                        className="text-xs text-sky-600 hover:underline px-2 py-1">
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteRutina(item.id)}
+                        className="text-gray-300 hover:text-red-500 transition-colors p-1">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {rutinaModal.open && (
+              <RutinaEjercicioModal
+                sesionId={id}
+                item={rutinaModal.item}
+                orden={rutina.length + 1}
+                onSaved={cargarRutina}
+                onClose={() => setRutinaModal({ open: false, item: null })}
+              />
+            )}
           </section>
 
           {/* Botón guardar inferior */}
