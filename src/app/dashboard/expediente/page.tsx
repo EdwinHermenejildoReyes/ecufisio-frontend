@@ -82,7 +82,7 @@ function NuevaSesionModal({
     debounceRef.current = setTimeout(() => {
       setLoadingCitas(true)
       expedienteRepository.citasDisponibles(q ? { q } : {})
-        .then(setCitas)
+        .then((data) => setCitas(Array.isArray(data) ? data : (data.results ?? [])))
         .catch(() => setCitas([]))
         .finally(() => setLoadingCitas(false))
     }, 300)
@@ -213,7 +213,6 @@ export default function ExpedientePage() {
   const [q, setQ] = useState('')
   const [modalNueva, setModalNueva] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const router = { push: (url: string) => { window.location.href = url } }
 
   const cargar = useCallback(async (busqueda: string) => {
     setLoading(true)
