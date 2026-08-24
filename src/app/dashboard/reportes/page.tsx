@@ -51,9 +51,9 @@ const METODO_LABELS: Record<string, string> = {
 }
 
 const SEXO_LABELS: Record<string, string> = {
-  masculino: 'Masculino',
-  femenino: 'Femenino',
-  otro: 'Otro',
+  M: 'Masculino',
+  F: 'Femenino',
+  O: 'Otro',
   no_especificado: 'No especificado',
 }
 
