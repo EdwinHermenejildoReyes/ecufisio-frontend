@@ -195,8 +195,9 @@ export default function PacienteHome() {
           {/* Accesos directos */}
           <section className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100">
             {[
-              { href: '/paciente/historial', label: 'Ver mi historial clínico', sub: 'Sesiones y diagnósticos' },
-              { href: '/paciente/perfil',    label: 'Editar mi perfil',          sub: 'Datos personales y contacto' },
+              { href: '/paciente/historial',       label: 'Ver mi historial clínico', sub: 'Sesiones y diagnósticos' },
+              { href: '/paciente/notificaciones', label: 'Mis notificaciones',       sub: 'Mensajes enviados por la clínica' },
+              { href: '/paciente/perfil',         label: 'Editar mi perfil',         sub: 'Datos personales y contacto' },
             ].map(({ href, label, sub }) => (
               <Link key={href} href={href} className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50">
                 <div className="flex-1">

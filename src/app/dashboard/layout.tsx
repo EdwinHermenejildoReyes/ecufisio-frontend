@@ -16,6 +16,7 @@ import {
   Home,
 } from 'lucide-react'
 import { logoutUser } from '@/store/auth/slices'
+import NotificationBell from '@/components/NotificationBell'
 
 const NAV_ITEMS = [
   { href: '/dashboard',              label: 'Inicio',        icon: Home,          exact: true },
@@ -103,13 +104,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {ROL_LABEL[user?.rol ?? ''] ?? user?.rol}
               </p>
             </div>
-            <button
-              onClick={handleLogout}
-              title="Cerrar sesión"
-              className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded shrink-0"
-            >
-              <LogOut size={15} />
-            </button>
+            <div className="flex items-center gap-0.5 shrink-0">
+              <NotificationBell />
+              <button
+                onClick={handleLogout}
+                title="Cerrar sesión"
+                className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-gray-100"
+              >
+                <LogOut size={15} />
+              </button>
+            </div>
           </div>
         </div>
       </aside>
