@@ -32,4 +32,8 @@ export const cobrosRepository = {
 
   cancelarPaquete: (id) =>
     api.post(`/cobros/paquetes/${id}/cancelar/`).then((r) => r.data),
+
+  // Auxiliares
+  listarServicios: () =>
+    api.get('/clinica/servicios/').then((r) => r.data),
 }
