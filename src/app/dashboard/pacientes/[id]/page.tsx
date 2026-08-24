@@ -93,6 +93,9 @@ function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value
 function TabPerfil({ p, onUpdated }: { p: PacienteDetalle; onUpdated: () => void }) {
   const [editando, setEditando] = useState(false)
   const [form, setForm] = useState({
+    nombres: p.user.nombres,
+    apellidos: p.user.apellidos,
+    telefono: p.user.telefono,
     ocupacion: p.ocupacion,
     direccion: p.direccion,
     contacto_emergencia_nombre: p.contacto_emergencia_nombre,
@@ -174,11 +177,15 @@ function TabPerfil({ p, onUpdated }: { p: PacienteDetalle; onUpdated: () => void
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <p className="md:col-span-2 text-xs font-semibold text-gray-500 uppercase tracking-wide pt-1">Datos de contacto</p>
           {[
-            { k: 'ocupacion', label: 'Ocupación', type: 'input' },
-            { k: 'direccion', label: 'Dirección', type: 'input' },
-            { k: 'contacto_emergencia_nombre', label: 'Contacto emergencia — nombre', type: 'input' },
-            { k: 'contacto_emergencia_telefono', label: 'Contacto emergencia — teléfono', type: 'input' },
+            { k: 'nombres', label: 'Nombres' },
+            { k: 'apellidos', label: 'Apellidos' },
+            { k: 'telefono', label: 'Teléfono / WhatsApp' },
+            { k: 'ocupacion', label: 'Ocupación' },
+            { k: 'direccion', label: 'Dirección' },
+            { k: 'contacto_emergencia_nombre', label: 'Contacto emergencia — nombre' },
+            { k: 'contacto_emergencia_telefono', label: 'Contacto emergencia — teléfono' },
           ].map(({ k, label }) => (
             <div key={k}>
               <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
@@ -186,6 +193,7 @@ function TabPerfil({ p, onUpdated }: { p: PacienteDetalle; onUpdated: () => void
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent" />
             </div>
           ))}
+          <p className="md:col-span-2 text-xs font-semibold text-gray-500 uppercase tracking-wide pt-2">Historial médico</p>
           {[
             { k: 'antecedentes_medicos', label: 'Antecedentes médicos' },
             { k: 'alergias', label: 'Alergias' },
@@ -360,7 +368,7 @@ export default function PacienteDetallePage() {
     setToggling(true)
     try {
       if (paciente.is_active) await pacientesRepository.desactivar(id)
-      else await pacientesRepository.actualizar(id, { is_active: true })
+      else await pacientesRepository.activar(id)
       cargar()
     } finally {
       setToggling(false)

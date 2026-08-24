@@ -16,6 +16,9 @@ export const pacientesRepository = {
   desactivar: (id) =>
     api.post(`/pacientes/${id}/desactivar/`).then((r) => r.data),
 
+  activar: (id) =>
+    api.post(`/pacientes/${id}/activar/`).then((r) => r.data),
+
   historialCitas: (id, params) =>
     api.get(`/pacientes/${id}/citas/`, { params }).then((r) => r.data),
 

@@ -41,10 +41,12 @@ const FORM_EMPTY: NuevoPacienteForm = {
 function calcularEdad(fechaNac: string | null): string {
   if (!fechaNac) return '—'
   const hoy = new Date()
-  const nac = new Date(fechaNac)
-  const edad = hoy.getFullYear() - nac.getFullYear() - (
-    (hoy.getMonth(), hoy.getDate()) < (nac.getMonth(), nac.getDate()) ? 1 : 0
-  )
+  const nac = new Date(fechaNac + 'T00:00:00')
+  let edad = hoy.getFullYear() - nac.getFullYear()
+  if (
+    hoy.getMonth() < nac.getMonth() ||
+    (hoy.getMonth() === nac.getMonth() && hoy.getDate() < nac.getDate())
+  ) edad--
   return `${edad} años`
 }
 
