@@ -79,7 +79,7 @@ export default function RegistroPage() {
             {[
               'Agenda y gestión de citas',
               'Expediente clínico digital',
-              'Facturación SRI Ecuador',
+              'Rutinas de ejercicio personalizadas',
               'Notificaciones por WhatsApp',
               'Portal web para pacientes',
             ].map((item) => (

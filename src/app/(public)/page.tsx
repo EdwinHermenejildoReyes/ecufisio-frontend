@@ -15,7 +15,6 @@ import {
   Menu,
   X,
   Heart,
-  FileText,
   Activity,
   Zap,
 } from 'lucide-react'
@@ -38,12 +37,6 @@ const FEATURES = [
     title: 'Rutinas de Ejercicio',
     description:
       'Prescribe rutinas personalizadas y monitorea la adherencia de tus pacientes. Haz seguimiento del dolor reportado sesión a sesión.',
-  },
-  {
-    icon: FileText,
-    title: 'Facturación SRI',
-    description:
-      'Genera y emite facturas electrónicas directamente al SRI Ecuador. Cumple con la normativa tributaria sin complicaciones.',
   },
   {
     icon: Bell,
@@ -81,12 +74,6 @@ const WHO_CARDS = [
 ]
 
 const ECUADOR_CARDS = [
-  {
-    icon: FileText,
-    title: 'Facturación SRI',
-    description:
-      'Emisión de facturas electrónicas integrada con el Servicio de Rentas Internas. Zona horaria America/Guayaquil de fábrica.',
-  },
   {
     icon: Shield,
     title: 'Datos seguros',
@@ -127,7 +114,6 @@ const PLANS = [
       'Notificaciones WhatsApp',
       'Rutinas de ejercicio',
       'Consentimientos digitales',
-      'Facturación SRI Ecuador',
       'Soporte prioritario',
     ],
     highlighted: true,
@@ -230,7 +216,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-              Agenda, expedientes clínicos, facturación SRI y comunicación con pacientes.
+              Agenda, expedientes clínicos, rutinas de ejercicio y comunicación con pacientes.
               Todo en una plataforma pensada para Ecuador.
             </p>
 
@@ -256,8 +242,8 @@ export default function LandingPage() {
                 <p className="text-xs text-gray-400 mt-1">Web, sin instalar</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-sky-600">SRI</p>
-                <p className="text-xs text-gray-400 mt-1">Facturación legal</p>
+                <p className="text-3xl font-bold text-sky-600">PWA</p>
+                <p className="text-xs text-gray-400 mt-1">Portal del paciente</p>
               </div>
               <div>
                 <p className="text-3xl font-bold text-sky-600">24/7</p>
