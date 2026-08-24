@@ -10,7 +10,6 @@ import {
   ClipboardList,
   Dumbbell,
   CreditCard,
-  FileText,
   BarChart2,
   Settings,
   LogOut,
@@ -25,7 +24,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/expediente',   label: 'Expediente',    icon: ClipboardList, exact: false },
   { href: '/dashboard/ejercicios',   label: 'Ejercicios',    icon: Dumbbell,      exact: false },
   { href: '/dashboard/pagos',        label: 'Cobros',        icon: CreditCard,    exact: false },
-  { href: '/dashboard/facturacion',  label: 'Facturación',   icon: FileText,      exact: false },
+  // { href: '/dashboard/facturacion',  label: 'Facturación',   icon: FileText,      exact: false },
   { href: '/dashboard/reportes',     label: 'Reportes',      icon: BarChart2,     exact: false },
   { href: '/dashboard/configuracion',label: 'Configuración', icon: Settings,      exact: false },
 ]
