@@ -1,20 +1,26 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Calendar, dateFnsLocalizer, Views, View } from 'react-big-calendar'
-import { format, parse, startOfWeek, getDay, addDays, startOfDay } from 'date-fns'
+import { format, parse, startOfWeek, getDay, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import {
   Plus, ChevronLeft, ChevronRight, X, Calendar as CalIcon,
   Clock, User, MapPin, FileText, CheckCircle2, XCircle,
-  AlertCircle, Loader2, RefreshCw,
+  AlertCircle, Loader2, RefreshCw, Search,
 } from 'lucide-react'
 import { agendaRepository } from '@/repositories/agenda'
+import { pacientesRepository } from '@/repositories/pacientes'
+import { configuracionRepository } from '@/repositories/configuracion'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 
 /* ── Localizer ── */
 const locales = { es }
-const localizer = dateFnsLocalizer({ format, parse, startOfWeek: (d: Date) => startOfWeek(d, { weekStartsOn: 1 }), getDay, locales })
+const localizer = dateFnsLocalizer({
+  format, parse,
+  startOfWeek: (d: Date) => startOfWeek(d, { weekStartsOn: 1 }),
+  getDay, locales,
+})
 
 const MESSAGES = {
   today: 'Hoy', previous: 'Anterior', next: 'Siguiente',
@@ -26,50 +32,35 @@ const MESSAGES = {
 
 /* ── Tipos ── */
 interface CitaEvento {
-  id: string
-  title: string
-  start: Date
-  end: Date
-  resource: CitaAPI
+  id: string; title: string; start: Date; end: Date; resource: CitaAPI
 }
-
 interface CitaAPI {
-  id: string
-  paciente_nombre: string
-  fisioterapeuta_nombre: string
-  servicio_nombre: string
-  servicio_color: string
-  sala_nombre: string | null
-  fecha_hora: string
-  fecha_hora_fin: string
-  duracion_minutos: number
-  estado: string
-  origen: string
+  id: string; paciente_nombre: string; fisioterapeuta_nombre: string
+  servicio_nombre: string; servicio_color: string; sala_nombre: string | null
+  fecha_hora: string; fecha_hora_fin: string; duracion_minutos: number
+  estado: string; origen: string
 }
-
 interface CitaDetalle extends CitaAPI {
-  notas_paciente: string
-  notas_internas: string
+  notas_paciente: string; notas_internas: string
   paciente: { id: string; nombre_completo: string; cedula: string }
   fisioterapeuta: { id: string; nombre_completo: string }
   servicio: { id: string; nombre: string; duracion_minutos: number; precio: string; color: string }
   sala: { id: string; nombre: string } | null
 }
+interface Fisioterapeuta { id: string; nombre_completo: string; email: string }
+interface PacienteResult { id: string; nombre_completo: string; cedula: string }
+interface Servicio { id: string; nombre: string; duracion_minutos: number; color: string }
+interface Sala { id: string; nombre: string }
+interface ResumenHoy { total: number; pendientes: number; confirmadas: number; completadas: number; canceladas: number }
 
-interface Fisioterapeuta {
-  id: string
-  nombre_completo: string
-  email: string
-}
-
-/* ── Estado badge ── */
+/* ── Badge de estado ── */
 const ESTADO_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  pendiente:   { label: 'Pendiente',   bg: 'bg-amber-100',  text: 'text-amber-700' },
-  confirmada:  { label: 'Confirmada',  bg: 'bg-sky-100',    text: 'text-sky-700' },
-  en_curso:    { label: 'En curso',    bg: 'bg-emerald-100',text: 'text-emerald-700' },
-  completada:  { label: 'Completada',  bg: 'bg-gray-100',   text: 'text-gray-600' },
-  cancelada:   { label: 'Cancelada',   bg: 'bg-red-100',    text: 'text-red-600' },
-  no_asistio:  { label: 'No asistió',  bg: 'bg-red-100',    text: 'text-red-600' },
+  pendiente:  { label: 'Pendiente',  bg: 'bg-amber-100',   text: 'text-amber-700' },
+  confirmada: { label: 'Confirmada', bg: 'bg-sky-100',     text: 'text-sky-700' },
+  en_curso:   { label: 'En curso',   bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  completada: { label: 'Completada', bg: 'bg-gray-100',    text: 'text-gray-600' },
+  cancelada:  { label: 'Cancelada',  bg: 'bg-red-100',     text: 'text-red-600' },
+  no_asistio: { label: 'No asistió', bg: 'bg-red-100',     text: 'text-red-600' },
 }
 
 function EstadoBadge({ estado }: { estado: string }) {
@@ -81,10 +72,105 @@ function EstadoBadge({ estado }: { estado: string }) {
   )
 }
 
-/* ── Formulario de nueva cita ── */
+/* ── Buscador de pacientes ── */
+function PacienteBuscador({ value, onChange }: {
+  value: PacienteResult | null
+  onChange: (p: PacienteResult | null) => void
+}) {
+  const [q, setQ] = useState('')
+  const [resultados, setResultados] = useState<PacienteResult[]>([])
+  const [open, setOpen] = useState(false)
+  const [buscando, setBuscando] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  useEffect(() => {
+    clearTimeout(debounceRef.current)
+    if (!q || q.length < 2) { setResultados([]); setOpen(false); return }
+    debounceRef.current = setTimeout(async () => {
+      setBuscando(true)
+      try {
+        const data = await pacientesRepository.listar({ q })
+        const list: any[] = Array.isArray(data) ? data : (data.results ?? [])
+        setResultados(list.map((p) => ({
+          id: p.id,
+          nombre_completo: p.nombre_completo
+            ?? p.user?.nombre_completo
+            ?? `${p.user?.nombres ?? ''} ${p.user?.apellidos ?? ''}`.trim(),
+          cedula: p.cedula ?? '',
+        })))
+        setOpen(true)
+      } catch { setResultados([]) }
+      finally { setBuscando(false) }
+    }, 300)
+  }, [q])
+
+  if (value) {
+    return (
+      <div className="flex items-center gap-2 border border-sky-300 bg-sky-50 rounded-lg px-3 py-2.5 text-sm">
+        <User className="w-4 h-4 text-sky-500 shrink-0" />
+        <span className="flex-1 font-medium text-gray-900">{value.nombre_completo}</span>
+        {value.cedula && <span className="text-gray-400 text-xs">CI {value.cedula}</span>}
+        <button type="button" onClick={() => onChange(null)} className="text-gray-400 hover:text-gray-600 ml-1">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        {buscando && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+        )}
+        <input
+          type="text"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Buscar por nombre o cédula…"
+          className="w-full border border-gray-200 rounded-lg pl-9 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+        />
+      </div>
+      {open && resultados.length > 0 && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          {resultados.slice(0, 6).map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => { onChange(p); setQ(''); setOpen(false) }}
+              className="w-full text-left px-4 py-2.5 hover:bg-sky-50 text-sm transition-colors border-b border-gray-50 last:border-0"
+            >
+              <span className="font-medium text-gray-900">{p.nombre_completo}</span>
+              {p.cedula && <span className="text-gray-400 ml-2 text-xs">CI {p.cedula}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      {open && !buscando && q.length >= 2 && resultados.length === 0 && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-400">
+          Sin resultados para "{q}"
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Modal: Nueva cita ── */
 interface NuevaCitaForm {
-  paciente_id: string
+  paciente: PacienteResult | null
   fisioterapeuta_id: string
+  servicio_id: string
+  sala_id: string
   fecha_hora: string
   duracion_minutos: string
   notas_paciente: string
@@ -92,18 +178,13 @@ interface NuevaCitaForm {
 }
 
 const FORM_EMPTY: NuevaCitaForm = {
-  paciente_id: '', fisioterapeuta_id: '', fecha_hora: '',
-  duracion_minutos: '60', notas_paciente: '', notas_internas: '',
+  paciente: null, fisioterapeuta_id: '', servicio_id: '', sala_id: '',
+  fecha_hora: '', duracion_minutos: '60', notas_paciente: '', notas_internas: '',
 }
 
-/* ── Modal de nueva cita ── */
-function NuevaCitaModal({
-  open, onClose, onSaved, fisioterapeutas, initialDateTime,
-}: {
-  open: boolean
-  onClose: () => void
-  onSaved: () => void
-  fisioterapeutas: Fisioterapeuta[]
+function NuevaCitaModal({ open, onClose, onSaved, fisioterapeutas, servicios, salas, initialDateTime }: {
+  open: boolean; onClose: () => void; onSaved: () => void
+  fisioterapeutas: Fisioterapeuta[]; servicios: Servicio[]; salas: Sala[]
   initialDateTime?: Date
 }) {
   const [form, setForm] = useState<NuevaCitaForm>(FORM_EMPTY)
@@ -112,30 +193,39 @@ function NuevaCitaModal({
 
   useEffect(() => {
     if (open) {
-      const dt = initialDateTime
-        ? format(initialDateTime, "yyyy-MM-dd'T'HH:mm")
-        : ''
+      const dt = initialDateTime ? format(initialDateTime, "yyyy-MM-dd'T'HH:mm") : ''
       setForm({ ...FORM_EMPTY, fecha_hora: dt })
       setError(null)
     }
   }, [open, initialDateTime])
 
   const set = (field: keyof NuevaCitaForm) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-      setForm((f) => ({ ...f, [field]: e.target.value }))
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      const val = e.target.value
+      setForm((f) => {
+        const next = { ...f, [field]: val }
+        if (field === 'servicio_id') {
+          const svc = servicios.find((s) => s.id === val)
+          if (svc) next.duracion_minutos = String(svc.duracion_minutos)
+        }
+        return next
+      })
+    }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.paciente_id || !form.fisioterapeuta_id || !form.fecha_hora) {
-      setError('Completa los campos obligatorios.')
+    if (!form.paciente || !form.fisioterapeuta_id || !form.fecha_hora) {
+      setError('Completa los campos obligatorios (paciente, fisioterapeuta y fecha).')
       return
     }
     setSaving(true)
     setError(null)
     try {
       await agendaRepository.crearCita({
-        paciente: form.paciente_id,
+        paciente: form.paciente.id,
         fisioterapeuta: form.fisioterapeuta_id,
+        ...(form.servicio_id && { servicio: form.servicio_id }),
+        ...(form.sala_id && { sala: form.sala_id }),
         fecha_hora: form.fecha_hora,
         duracion_minutos: parseInt(form.duracion_minutos),
         notas_paciente: form.notas_paciente,
@@ -144,10 +234,11 @@ function NuevaCitaModal({
       onSaved()
       onClose()
     } catch (err: any) {
-      const data = err?.response?.data
-      if (data?.fecha_hora) setError(data.fecha_hora[0] ?? data.fecha_hora)
-      else if (data?.detail) setError(data.detail)
-      else setError('No se pudo guardar la cita.')
+      const d = err?.response?.data
+      if (d?.fecha_hora) setError(Array.isArray(d.fecha_hora) ? d.fecha_hora[0] : d.fecha_hora)
+      else if (d?.non_field_errors) setError(d.non_field_errors[0])
+      else if (d?.detail) setError(d.detail)
+      else setError('No se pudo guardar la cita. Verifica los datos.')
     } finally {
       setSaving(false)
     }
@@ -157,7 +248,7 @@ function NuevaCitaModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900">Nueva cita</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded">
@@ -165,26 +256,21 @@ function NuevaCitaModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
           {error && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              {error}
+              <AlertCircle className="w-4 h-4 shrink-0" />{error}
             </div>
           )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              ID Paciente <span className="text-red-400">*</span>
+              Paciente <span className="text-red-400">*</span>
             </label>
-            <input
-              type="text"
-              value={form.paciente_id}
-              onChange={set('paciente_id')}
-              placeholder="UUID del paciente"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+            <PacienteBuscador
+              value={form.paciente}
+              onChange={(p) => setForm((f) => ({ ...f, paciente: p }))}
             />
-            <p className="text-xs text-gray-400 mt-1">Módulo de búsqueda de pacientes próximamente</p>
           </div>
 
           <div>
@@ -203,6 +289,20 @@ function NuevaCitaModal({
             </select>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Servicio</label>
+            <select
+              value={form.servicio_id}
+              onChange={set('servicio_id')}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+            >
+              <option value="">Sin especificar</option>
+              {servicios.map((s) => (
+                <option key={s.id} value={s.id}>{s.nombre}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -216,18 +316,34 @@ function NuevaCitaModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Duración (min)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Duración</label>
               <select
                 value={form.duracion_minutos}
                 onChange={set('duracion_minutos')}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
               >
-                {[30, 45, 60, 90, 120].map((m) => (
+                {[15, 30, 45, 60, 90, 120].map((m) => (
                   <option key={m} value={m}>{m} min</option>
                 ))}
               </select>
             </div>
           </div>
+
+          {salas.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sala</label>
+              <select
+                value={form.sala_id}
+                onChange={set('sala_id')}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+              >
+                <option value="">Sin asignar</option>
+                {salas.map((s) => (
+                  <option key={s.id} value={s.id}>{s.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Notas para el paciente</label>
@@ -273,13 +389,9 @@ function NuevaCitaModal({
   )
 }
 
-/* ── Modal de detalle ── */
-function DetalleCitaModal({
-  citaId, onClose, onUpdated,
-}: {
-  citaId: string | null
-  onClose: () => void
-  onUpdated: () => void
+/* ── Modal: Detalle de cita ── */
+function DetalleCitaModal({ citaId, onClose, onUpdated }: {
+  citaId: string | null; onClose: () => void; onUpdated: () => void
 }) {
   const [cita, setCita] = useState<CitaDetalle | null>(null)
   const [loading, setLoading] = useState(false)
@@ -303,11 +415,7 @@ function DetalleCitaModal({
       else await agendaRepository.cancelarCita(citaId)
       onUpdated()
       onClose()
-    } catch {
-      // noop — error handled gracefully
-    } finally {
-      setActionLoading(null)
-    }
+    } catch {} finally { setActionLoading(null) }
   }
 
   if (!citaId) return null
@@ -329,9 +437,12 @@ function DetalleCitaModal({
             </div>
           )}
 
+          {!loading && !cita && (
+            <p className="text-center text-sm text-gray-400 py-8">No se pudo cargar la cita.</p>
+          )}
+
           {!loading && cita && (
             <div className="space-y-4">
-              {/* Estado */}
               <div className="flex items-center justify-between">
                 <EstadoBadge estado={cita.estado} />
                 <span className="text-xs text-gray-400 capitalize">{cita.origen}</span>
@@ -343,17 +454,19 @@ function DetalleCitaModal({
                   className="w-3 h-3 rounded-full shrink-0"
                   style={{ backgroundColor: cita.servicio?.color ?? '#3B82F6' }}
                 />
-                <span className="font-semibold text-gray-900">{cita.servicio?.nombre}</span>
-                <span className="text-sm text-gray-400">({cita.servicio?.duracion_minutos} min)</span>
+                <span className="font-semibold text-gray-900">{cita.servicio?.nombre ?? 'Sin servicio'}</span>
+                {cita.servicio?.duracion_minutos && (
+                  <span className="text-sm text-gray-400">({cita.servicio.duracion_minutos} min)</span>
+                )}
               </div>
 
-              {/* Info rows */}
+              {/* Datos */}
               <div className="space-y-2.5 text-sm">
                 <div className="flex items-center gap-2 text-gray-700">
                   <User className="w-4 h-4 text-gray-400 shrink-0" />
-                  <span>{cita.paciente?.nombre_completo}</span>
+                  <span className="font-medium">{cita.paciente?.nombre_completo}</span>
                   {cita.paciente?.cedula && (
-                    <span className="text-gray-400">CI: {cita.paciente.cedula}</span>
+                    <span className="text-gray-400 text-xs">CI {cita.paciente.cedula}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-gray-700">
@@ -375,13 +488,13 @@ function DetalleCitaModal({
                   </div>
                 )}
                 {cita.notas_paciente && (
-                  <div className="flex gap-2 text-gray-600">
+                  <div className="flex gap-2 text-gray-600 bg-gray-50 p-2.5 rounded-lg">
                     <FileText className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
-                    <p>{cita.notas_paciente}</p>
+                    <p className="text-xs">{cita.notas_paciente}</p>
                   </div>
                 )}
                 {cita.notas_internas && (
-                  <div className="flex gap-2 text-gray-600 bg-amber-50 p-2 rounded-lg">
+                  <div className="flex gap-2 bg-amber-50 p-2.5 rounded-lg">
                     <FileText className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                     <p className="text-amber-800 text-xs">{cita.notas_internas}</p>
                   </div>
@@ -453,19 +566,32 @@ export default function AgendaPage() {
   const [events, setEvents] = useState<CitaEvento[]>([])
   const [loading, setLoading] = useState(false)
   const [fisioterapeutas, setFisioterapeutas] = useState<Fisioterapeuta[]>([])
+  const [servicios, setServicios] = useState<Servicio[]>([])
+  const [salas, setSalas] = useState<Sala[]>([])
   const [filtroFisio, setFiltroFisio] = useState('')
   const [detalleCitaId, setDetalleCitaId] = useState<string | null>(null)
   const [modalNuevaCita, setModalNuevaCita] = useState(false)
   const [slotSeleccionado, setSlotSeleccionado] = useState<Date | undefined>(undefined)
+  const [resumen, setResumen] = useState<ResumenHoy | null>(null)
 
-  /* Cargar fisioterapeutas */
-  useEffect(() => {
-    agendaRepository.listarFisioterapeutas()
-      .then(setFisioterapeutas)
-      .catch(() => {})
+  const cargarResumen = useCallback(() => {
+    agendaRepository.resumenHoy().then(setResumen).catch(() => {})
   }, [])
 
-  /* Cargar citas según rango visible */
+  useEffect(() => {
+    Promise.all([
+      agendaRepository.listarFisioterapeutas().catch(() => []),
+      configuracionRepository.listarServicios().catch(() => []),
+      configuracionRepository.listarSalas().catch(() => []),
+    ]).then(([fisios, svcs, sls]) => {
+      const toList = (d: any) => Array.isArray(d) ? d : (d?.results ?? [])
+      setFisioterapeutas(toList(fisios))
+      setServicios(toList(svcs))
+      setSalas(toList(sls))
+    })
+    cargarResumen()
+  }, [cargarResumen])
+
   const cargarCitas = useCallback(async (rangeDate: Date, currentView: View, fisioId: string) => {
     setLoading(true)
     try {
@@ -489,9 +615,10 @@ export default function AgendaPage() {
       const params: Record<string, string> = { fecha_inicio, fecha_fin }
       if (fisioId) params.fisioterapeuta = fisioId
 
-      const data: CitaAPI[] = await agendaRepository.listarCitas(params)
+      const data = await agendaRepository.listarCitas(params)
+      const list: CitaAPI[] = Array.isArray(data) ? data : (data.results ?? [])
       setEvents(
-        data.map((c) => ({
+        list.map((c) => ({
           id: c.id,
           title: `${c.paciente_nombre} — ${c.servicio_nombre}`,
           start: new Date(c.fecha_hora),
@@ -510,24 +637,19 @@ export default function AgendaPage() {
     cargarCitas(date, view, filtroFisio)
   }, [date, view, filtroFisio, cargarCitas])
 
-  const handleSelectEvent = (event: CitaEvento) => {
-    setDetalleCitaId(event.id)
-  }
-
-  const handleSelectSlot = ({ start }: { start: Date }) => {
-    setSlotSeleccionado(start)
-    setModalNuevaCita(true)
+  const refresh = () => {
+    cargarCitas(date, view, filtroFisio)
+    cargarResumen()
   }
 
   const eventStyleGetter = (event: CitaEvento) => {
     const color = event.resource.servicio_color ?? '#3B82F6'
     const estado = event.resource.estado
-    const opacity = estado === 'cancelada' || estado === 'no_asistio' ? 0.45 : 1
     return {
       style: {
         backgroundColor: color,
         borderColor: color,
-        opacity,
+        opacity: estado === 'cancelada' || estado === 'no_asistio' ? 0.4 : 1,
         color: '#fff',
         borderRadius: '6px',
         fontSize: '12px',
@@ -536,7 +658,6 @@ export default function AgendaPage() {
     }
   }
 
-  /* Navegación */
   const irHoy = () => setDate(new Date())
   const irAnterior = () => {
     if (view === Views.MONTH) setDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
@@ -561,45 +682,33 @@ export default function AgendaPage() {
   return (
     <div className="flex flex-col h-full">
       {/* ── Barra superior ── */}
-      <div className="bg-white border-b border-gray-100 px-6 py-4">
+      <div className="bg-white border-b border-gray-100 px-6 py-4 space-y-3">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          {/* Título + navegación */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={irAnterior}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-            >
+          {/* Navegación */}
+          <div className="flex items-center gap-2">
+            <button onClick={irAnterior} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
               <ChevronLeft className="w-5 h-5" />
             </button>
             <h1 className="text-lg font-semibold text-gray-900 capitalize min-w-[200px] text-center">
               {tituloFecha()}
             </h1>
-            <button
-              onClick={irSiguiente}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-            >
+            <button onClick={irSiguiente} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
               <ChevronRight className="w-5 h-5" />
             </button>
-            <button
-              onClick={irHoy}
-              className="px-3 py-1.5 text-sm font-medium text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors"
-            >
+            <button onClick={irHoy} className="px-3 py-1.5 text-sm font-medium text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors">
               Hoy
             </button>
           </div>
 
-          {/* Filtros + acciones */}
+          {/* Controles */}
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Selector de vista */}
             <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
               {([Views.DAY, Views.WEEK, Views.MONTH] as View[]).map((v) => (
                 <button
                   key={v}
                   onClick={() => setView(v)}
                   className={`px-3 py-1.5 font-medium transition-colors ${
-                    view === v
-                      ? 'bg-sky-600 text-white'
-                      : 'text-gray-600 hover:bg-gray-50'
+                    view === v ? 'bg-sky-600 text-white' : 'text-gray-600 hover:bg-gray-50'
                   }`}
                 >
                   {v === Views.DAY ? 'Día' : v === Views.WEEK ? 'Semana' : 'Mes'}
@@ -607,7 +716,6 @@ export default function AgendaPage() {
               ))}
             </div>
 
-            {/* Filtro fisioterapeuta */}
             {fisioterapeutas.length > 0 && (
               <select
                 value={filtroFisio}
@@ -621,9 +729,8 @@ export default function AgendaPage() {
               </select>
             )}
 
-            {/* Refresh */}
             <button
-              onClick={() => cargarCitas(date, view, filtroFisio)}
+              onClick={refresh}
               disabled={loading}
               className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50"
               title="Actualizar"
@@ -631,16 +738,33 @@ export default function AgendaPage() {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
-            {/* Nueva cita */}
             <button
               onClick={() => { setSlotSeleccionado(undefined); setModalNuevaCita(true) }}
               className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
             >
-              <Plus className="w-4 h-4" />
-              Nueva cita
+              <Plus className="w-4 h-4" />Nueva cita
             </button>
           </div>
         </div>
+
+        {/* KPIs de hoy */}
+        {resumen && (
+          <div className="flex items-center gap-5 text-sm pt-0.5">
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Hoy</span>
+            {[
+              { label: 'total', value: resumen.total, color: 'text-gray-700' },
+              { label: 'pendientes', value: resumen.pendientes, color: 'text-amber-600' },
+              { label: 'confirmadas', value: resumen.confirmadas, color: 'text-sky-600' },
+              { label: 'completadas', value: resumen.completadas, color: 'text-emerald-600' },
+              { label: 'canceladas', value: resumen.canceladas, color: 'text-red-500' },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="flex items-baseline gap-1">
+                <span className={`font-bold text-base ${color}`}>{value}</span>
+                <span className="text-gray-400 text-xs">{label}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Calendario ── */}
@@ -648,16 +772,18 @@ export default function AgendaPage() {
         <style>{`
           .rbc-calendar { font-family: inherit; }
           .rbc-toolbar { display: none; }
-          .rbc-header { font-size: 12px; font-weight: 600; color: #6b7280; padding: 8px 4px; }
+          .rbc-header { font-size: 12px; font-weight: 600; color: #6b7280; padding: 8px 4px; border-bottom: 1px solid #f3f4f6; }
           .rbc-today { background-color: #f0f9ff; }
-          .rbc-event { border-radius: 6px !important; }
+          .rbc-event { border-radius: 6px !important; cursor: pointer; }
           .rbc-event:focus { outline: none; box-shadow: 0 0 0 2px #0ea5e9; }
-          .rbc-slot-selection { background-color: rgba(14,165,233,0.15); }
+          .rbc-slot-selection { background-color: rgba(14,165,233,0.12); border-radius: 4px; }
           .rbc-time-content { border-top: 1px solid #e5e7eb; }
           .rbc-timeslot-group { border-bottom-color: #f3f4f6; }
           .rbc-time-slot { color: #9ca3af; font-size: 11px; }
           .rbc-off-range-bg { background: #f9fafb; }
-          .rbc-show-more { color: #0ea5e9; font-weight: 500; }
+          .rbc-show-more { color: #0ea5e9; font-weight: 600; font-size: 11px; }
+          .rbc-month-row { border-color: #f3f4f6; }
+          .rbc-day-bg + .rbc-day-bg { border-color: #f3f4f6; }
         `}</style>
         <Calendar
           localizer={localizer}
@@ -666,8 +792,8 @@ export default function AgendaPage() {
           date={date}
           onNavigate={setDate}
           onView={setView}
-          onSelectEvent={handleSelectEvent}
-          onSelectSlot={handleSelectSlot}
+          onSelectEvent={(event) => setDetalleCitaId((event as CitaEvento).id)}
+          onSelectSlot={({ start }) => { setSlotSeleccionado(start as Date); setModalNuevaCita(true) }}
           selectable
           messages={MESSAGES}
           culture="es"
@@ -678,10 +804,8 @@ export default function AgendaPage() {
           min={new Date(2024, 0, 1, 7, 0)}
           max={new Date(2024, 0, 1, 21, 0)}
           formats={{
-            dayFormat: (date, culture, localizer) =>
-              localizer!.format(date, 'EEE d', culture),
-            timeGutterFormat: (date, culture, localizer) =>
-              localizer!.format(date, 'HH:mm', culture),
+            dayFormat: (date, culture, localizer) => localizer!.format(date, 'EEE d', culture),
+            timeGutterFormat: (date, culture, localizer) => localizer!.format(date, 'HH:mm', culture),
             eventTimeRangeFormat: ({ start, end }, culture, localizer) =>
               `${localizer!.format(start, 'HH:mm', culture)} – ${localizer!.format(end, 'HH:mm', culture)}`,
           }}
@@ -700,14 +824,16 @@ export default function AgendaPage() {
       <NuevaCitaModal
         open={modalNuevaCita}
         onClose={() => setModalNuevaCita(false)}
-        onSaved={() => cargarCitas(date, view, filtroFisio)}
+        onSaved={refresh}
         fisioterapeutas={fisioterapeutas}
+        servicios={servicios}
+        salas={salas}
         initialDateTime={slotSeleccionado}
       />
       <DetalleCitaModal
         citaId={detalleCitaId}
         onClose={() => setDetalleCitaId(null)}
-        onUpdated={() => cargarCitas(date, view, filtroFisio)}
+        onUpdated={refresh}
       />
     </div>
   )
