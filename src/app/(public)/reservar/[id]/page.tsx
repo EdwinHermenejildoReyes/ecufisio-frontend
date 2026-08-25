@@ -77,19 +77,55 @@ function Stepper({ current }: { current: number }) {
 // ─── Paso 1: Servicio ─────────────────────────────────────────────────────────
 
 function PasoServicio({
-  servicios, selected, onSelect,
-}: { servicios: Servicio[]; selected: Servicio | null; onSelect: (s: Servicio) => void }) {
+  servicios, selected, onSelect, evaluacion,
+}: { servicios: Servicio[]; selected: Servicio | null; onSelect: (s: Servicio) => void; evaluacion: Servicio | null }) {
   return (
     <div>
       <h2 className="text-lg font-bold text-gray-900 mb-4">¿Qué servicio necesitas?</h2>
+
       {servicios.length === 0 && (
         <div className="text-center py-10 text-gray-400">
           <p className="text-sm">No hay servicios disponibles en este momento.</p>
           <p className="text-xs mt-1">Por favor contacta a la clínica directamente.</p>
         </div>
       )}
+
+      {/* Opción para quienes no saben qué servicio necesitan */}
+      {evaluacion && (
+        <button
+          onClick={() => onSelect(evaluacion)}
+          className={`w-full text-left p-4 rounded-xl border-2 transition-all mb-4 ${
+            selected?.id === evaluacion.id
+              ? 'border-amber-400 bg-amber-50'
+              : 'border-amber-200 bg-amber-50/50 hover:border-amber-400'
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <span className="text-2xl mt-0.5">🤔</span>
+            <div className="flex-1">
+              <p className="font-semibold text-gray-900 text-sm">No sé qué servicio necesito</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Agenda una <strong>Evaluación Fisioterapéutica</strong> — el especialista determinará el tratamiento adecuado para tu caso.
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-sm font-bold text-amber-700">${evaluacion.precio}</p>
+              <p className="text-xs text-gray-400 flex items-center gap-1 justify-end">
+                <Clock className="w-3 h-3" />{evaluacion.duracion_minutos} min
+              </p>
+            </div>
+          </div>
+        </button>
+      )}
+
+      {/* Lista de servicios específicos */}
+      {servicios.length > 0 && (
+        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+          O elige un servicio específico
+        </p>
+      )}
       <div className="space-y-3">
-        {servicios.map((s) => (
+        {servicios.filter(s => s.id !== evaluacion?.id).map((s) => (
           <button
             key={s.id}
             onClick={() => onSelect(s)}
@@ -392,7 +428,10 @@ export default function ReservarPage() {
       reservasRepository.obtenerFisioterapeuta(id),
       reservasRepository.listarServicios(),
     ])
-      .then(([f, s]) => { setFisio(f); setServicios(s) })
+      .then(([f, s]) => {
+        setFisio(f)
+        setServicios(s)
+      })
       .catch(() => setNotFound(true))
       .finally(() => setLoadingInit(false))
   }, [id])
@@ -499,7 +538,14 @@ export default function ReservarPage() {
               <Stepper current={step} />
 
               {step === 0 && (
-                <PasoServicio servicios={servicios} selected={servicio} onSelect={handleSelectServicio} />
+                <PasoServicio
+                  servicios={servicios}
+                  selected={servicio}
+                  onSelect={handleSelectServicio}
+                  evaluacion={servicios.find(s =>
+                    s.nombre.toLowerCase().includes('evaluaci')
+                  ) ?? null}
+                />
               )}
               {step === 1 && fisio && (
                 <PasoFecha
