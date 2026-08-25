@@ -15,6 +15,8 @@ type Fisio = {
   dias_disponibles: number[]
 }
 
+type Slot = { hora: string; disponible: boolean }
+
 type Servicio = {
   id: number
   nombre: string
@@ -171,7 +173,7 @@ function PasoFecha({
   selected: Date | null
   fisioId: string
   servicioId: string
-  onSelect: (d: Date, slots: string[]) => void
+  onSelect: (d: Date, slots: Slot[]) => void
 }) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -187,8 +189,8 @@ function PasoFecha({
     const key = isoDate(day)
     setChecking(key)
     try {
-      const slots: string[] = await reservasRepository.obtenerSlots(fisioId, key, servicioId)
-      if (slots.length === 0) {
+      const slots: Slot[] = await reservasRepository.obtenerSlots(fisioId, key, servicioId)
+      if (slots.length === 0 || !slots.some((s) => s.disponible)) {
         setNoSlotsDate(day)
       } else {
         onSelect(day, slots)
@@ -313,19 +315,25 @@ function PasoFecha({
 // ─── Paso 3: Hora ─────────────────────────────────────────────────────────────
 
 function PasoHora({
-  slots, selected, onSelect, fecha,
+  slots, selected, onSelect, fecha, conflictMsg,
 }: {
-  slots: string[]; selected: string | null;
-  onSelect: (h: string) => void; fecha: Date | null
+  slots: Slot[]; selected: string | null;
+  onSelect: (h: string) => void; fecha: Date | null; conflictMsg?: string | null
 }) {
   return (
     <div>
       <h2 className="text-lg font-bold text-gray-900 mb-1">Elige un horario</h2>
       {fecha && (
-        <p className="text-sm text-gray-500 mb-4 flex items-center gap-1">
+        <p className="text-sm text-gray-500 mb-3 flex items-center gap-1">
           <Calendar className="w-4 h-4" />
           {fecha.toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
+      )}
+      {conflictMsg && (
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3 mb-4">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          {conflictMsg}
+        </div>
       )}
       {slots.length === 0 ? (
         <div className="text-center py-10">
@@ -333,21 +341,30 @@ function PasoHora({
           <p className="text-sm text-gray-400">No hay horarios disponibles para este día.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-          {slots.map((slot) => (
-            <button
-              key={slot}
-              onClick={() => onSelect(slot)}
-              className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
-                selected === slot
-                  ? 'border-sky-500 bg-sky-600 text-white'
-                  : 'border-gray-200 text-gray-700 hover:border-sky-300 hover:bg-sky-50'
-              }`}
-            >
-              {slot}
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {slots.map(({ hora, disponible }) => (
+              <button
+                key={hora}
+                disabled={!disponible}
+                onClick={() => onSelect(hora)}
+                title={disponible ? undefined : 'Horario ocupado'}
+                className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
+                  selected === hora
+                    ? 'border-sky-500 bg-sky-600 text-white'
+                    : disponible
+                    ? 'border-gray-200 text-gray-700 hover:border-sky-300 hover:bg-sky-50'
+                    : 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed line-through'
+                }`}
+              >
+                {hora}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-3 text-center">
+            Los horarios en gris ya están reservados.
+          </p>
+        </>
       )}
     </div>
   )
@@ -471,8 +488,9 @@ export default function ReservarPage() {
   const [step, setStep] = useState(0)
   const [servicio, setServicio] = useState<Servicio | null>(null)
   const [fecha, setFecha] = useState<Date | null>(null)
-  const [slots, setSlots] = useState<string[]>([])
+  const [slots, setSlots] = useState<Slot[]>([])
   const [hora, setHora] = useState<string | null>(null)
+  const [slotError, setSlotError] = useState<string | null>(null)
   const [form, setForm] = useState<FormData>({ nombres: '', apellidos: '', email: '', telefono: '', notas: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -491,10 +509,11 @@ export default function ReservarPage() {
       .finally(() => setLoadingInit(false))
   }, [id])
 
-  const handleSelectFecha = (d: Date, availableSlots: string[]) => {
+  const handleSelectFecha = (d: Date, availableSlots: Slot[]) => {
     setFecha(d)
     setSlots(availableSlots)
     setHora(null)
+    setSlotError(null)
     setStep(2)
   }
 
@@ -503,6 +522,7 @@ export default function ReservarPage() {
     setFecha(null)
     setSlots([])
     setHora(null)
+    setSlotError(null)
   }
 
   const handleSubmit = async () => {
@@ -527,8 +547,19 @@ export default function ReservarPage() {
       })
       setDone(true)
     } catch (e: any) {
-      const msg = e?.response?.data?.detail || 'No se pudo confirmar la reserva. Intenta de nuevo.'
-      setError(msg)
+      const httpStatus = e?.response?.status
+      if (httpStatus === 409) {
+        // El slot fue tomado por otro usuario — recargar disponibilidad y retroceder
+        const freshSlots: Slot[] = await reservasRepository
+          .obtenerSlots(id, isoDate(fecha), String(servicio.id))
+          .catch(() => [])
+        setSlots(freshSlots)
+        setHora(null)
+        setSlotError('Ese horario acaba de ser reservado por otra persona. Por favor elige otro.')
+        setStep(2)
+      } else {
+        setError(e?.response?.data?.detail || 'No se pudo confirmar la reserva. Intenta de nuevo.')
+      }
     } finally {
       setSaving(false)
     }
@@ -605,7 +636,13 @@ export default function ReservarPage() {
                 />
               )}
               {step === 2 && (
-                <PasoHora slots={slots} selected={hora} onSelect={setHora} fecha={fecha} />
+                <PasoHora
+                  slots={slots}
+                  selected={hora}
+                  onSelect={(h) => { setHora(h); setSlotError(null) }}
+                  fecha={fecha}
+                  conflictMsg={slotError}
+                />
               )}
               {step === 3 && (
                 <PasoDatos form={form} setForm={setForm} onSubmit={handleSubmit} saving={saving} error={error} />
