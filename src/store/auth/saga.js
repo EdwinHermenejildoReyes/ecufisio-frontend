@@ -9,7 +9,7 @@ function* handleLogin(action) {
   try {
     const { email, password } = action.payload
     const { access, refresh } = yield call(authRepository.login, email, password)
-    const user = yield call(authRepository.getMe)
+    const user = yield call(authRepository.getMe, access)
     yield put(loginSuccess({ user, access, refresh }))
 
     if (user.rol === 'paciente') window.location.href = '/paciente'
@@ -28,7 +28,7 @@ function* handleRegister(action) {
 
     // Auto-login tras el registro
     const { access, refresh } = yield call(authRepository.login, email, password)
-    const user = yield call(authRepository.getMe)
+    const user = yield call(authRepository.getMe, access)
     yield put(loginSuccess({ user, access, refresh }))
 
     window.location.href = '/dashboard'

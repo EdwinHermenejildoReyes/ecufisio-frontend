@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { Link2 } from 'lucide-react'
 import { configuracionRepository } from '@/repositories/configuracion'
 import { getErrorMessage } from '@/utils/errorMessages'
+import { WEB_URL } from '@/utils/getEnvVars'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -256,7 +258,7 @@ function TabServicios() {
 
   const cargar = () =>
     configuracionRepository.listarServicios()
-      .then(setServicios)
+      .then((d) => setServicios(Array.isArray(d) ? d : (d.results ?? [])))
       .catch(() => {})
       .finally(() => setLoading(false))
 
@@ -458,7 +460,7 @@ function TabSalas() {
 
   const cargar = () =>
     configuracionRepository.listarSalas()
-      .then(setSalas)
+      .then((d) => setSalas(Array.isArray(d) ? d : (d.results ?? [])))
       .catch(() => {})
       .finally(() => setLoading(false))
 
@@ -625,7 +627,7 @@ function TabEquipo() {
 
   const cargar = () =>
     configuracionRepository.listarEquipo()
-      .then(setEquipo)
+      .then((d) => setEquipo(Array.isArray(d) ? d : (d.results ?? [])))
       .catch(() => {})
       .finally(() => setLoading(false))
 
@@ -694,6 +696,18 @@ function TabEquipo() {
               <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
                 Inactivo
               </span>
+            )}
+            {m.rol === 'fisioterapeuta' && m.is_active && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`${WEB_URL}/reservar/${m.id}`)
+                  alert('Link copiado al portapapeles')
+                }}
+                title="Copiar link de reserva"
+                className="text-gray-400 hover:text-sky-600 transition-colors"
+              >
+                <Link2 className="w-4 h-4" />
+              </button>
             )}
             <button
               onClick={() => setModal({ open: true, data: m })}

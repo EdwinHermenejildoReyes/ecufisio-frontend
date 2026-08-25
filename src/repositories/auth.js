@@ -7,8 +7,8 @@ export const authRepository = {
   register: (data) =>
     api.post('/auth/users/', data).then((r) => r.data),
 
-  getMe: () =>
-    api.get('/auth/users/me/').then((r) => r.data),
+  getMe: (token) =>
+    api.get('/auth/users/me/', token ? { headers: { Authorization: `JWT ${token}` } } : {}).then((r) => r.data),
 
   refreshToken: (refresh) =>
     api.post('/auth/jwt/refresh/', { refresh }).then((r) => r.data),
