@@ -5,6 +5,7 @@ import { Link2 } from 'lucide-react'
 import { configuracionRepository } from '@/repositories/configuracion'
 import { getErrorMessage } from '@/utils/errorMessages'
 import { WEB_URL } from '@/utils/getEnvVars'
+import { sanitizeTel } from '@/utils/format'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -200,8 +201,9 @@ function TabClinica() {
           <Field label="Teléfono">
             <input
               className="input"
+              type="tel"
               value={form.telefono}
-              onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+              onChange={(e) => setForm({ ...form, telefono: sanitizeTel(e.target.value) })}
             />
           </Field>
           <Field label="Email de contacto">
@@ -779,7 +781,7 @@ function EquipoModal({
           </Field>
         )}
         <Field label="Teléfono">
-          <input className="input" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
+          <input className="input" type="tel" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: sanitizeTel(e.target.value) })} />
         </Field>
         <Field label="Rol" required>
           <select className="input" value={form.rol} onChange={(e) => setForm({ ...form, rol: e.target.value })}>

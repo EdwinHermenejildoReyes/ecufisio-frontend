@@ -7,6 +7,7 @@ import {
   Loader2, User, Phone, Mail, Calendar, RefreshCw,
 } from 'lucide-react'
 import { pacientesRepository } from '@/repositories/pacientes'
+import { sanitizeTel } from '@/utils/format'
 
 /* ── Tipos ── */
 interface PacienteRow {
@@ -153,7 +154,7 @@ function NuevoPacienteModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono / WhatsApp</label>
-              <input type="tel" value={form.telefono} onChange={set('telefono')} placeholder="+593 99 999 9999"
+              <input type="tel" value={form.telefono} onChange={(e) => setForm(f => ({ ...f, telefono: sanitizeTel(e.target.value) }))} placeholder="+593 99 999 9999"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent" />
             </div>
             <div>

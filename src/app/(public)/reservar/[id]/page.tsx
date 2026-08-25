@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { Activity, ChevronLeft, ChevronRight, Check, Clock, Calendar, User, AlertCircle, Loader2 } from 'lucide-react'
 import { reservasRepository } from '@/repositories/reservas'
+import { sanitizeTel } from '@/utils/format'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -295,7 +296,7 @@ function PasoDatos({
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Teléfono / WhatsApp</label>
-          <input className={INPUT} type="tel" value={form.telefono} onChange={set('telefono')} placeholder="+593 99 999 9999" />
+          <input className={INPUT} type="tel" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: sanitizeTel(e.target.value) })} placeholder="+593 99 999 9999" />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Motivo de consulta</label>

@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { clearError } from '@/store/auth/slices'
 import Link from 'next/link'
 import { Activity, Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react'
+import { sanitizeTel } from '@/utils/format'
 
 /* ── Validación de contraseña ── */
 const PASSWORD_RULES = [
@@ -181,7 +182,7 @@ export default function RegistroPage() {
                 <input
                   type="tel"
                   value={form.telefono}
-                  onChange={set('telefono')}
+                  onChange={(e) => setForm((f) => ({ ...f, telefono: sanitizeTel(e.target.value) }))}
                   placeholder="+593 99 999 9999"
                   disabled={loading}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50"
