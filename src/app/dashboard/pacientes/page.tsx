@@ -9,6 +9,24 @@ import {
 import { pacientesRepository } from '@/repositories/pacientes'
 import { sanitizeTel } from '@/utils/format'
 
+const sanitizeCedula = (v: string) => v.replace(/\D/g, '').slice(0, 10)
+
+function validateCedula(cedula: string): boolean {
+  if (!/^\d{10}$/.test(cedula)) return false
+  const provincia = parseInt(cedula.substring(0, 2), 10)
+  if (provincia < 1 || provincia > 24) return false
+  if (parseInt(cedula[2], 10) >= 6) return false
+  const coef = [2, 1, 2, 1, 2, 1, 2, 1, 2]
+  let suma = 0
+  for (let i = 0; i < 9; i++) {
+    let val = parseInt(cedula[i], 10) * coef[i]
+    if (val >= 10) val -= 9
+    suma += val
+  }
+  const verificador = suma % 10 === 0 ? 0 : 10 - (suma % 10)
+  return verificador === parseInt(cedula[9], 10)
+}
+
 /* ── Tipos ── */
 interface PacienteRow {
   id: string
@@ -81,10 +99,21 @@ function NuevoPacienteModal({
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }))
 
+  const cedulaError =
+    form.cedula.length > 0 && form.cedula.length < 10
+      ? 'Debe tener 10 dígitos'
+      : form.cedula.length === 10 && !validateCedula(form.cedula)
+      ? 'Cédula inválida — verifica el número'
+      : null
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.nombres || !form.apellidos || !form.email) {
       setError('Nombre, apellidos y correo son obligatorios.')
+      return
+    }
+    if (cedulaError) {
+      setError(cedulaError)
       return
     }
     setSaving(true)
@@ -160,9 +189,27 @@ function NuevoPacienteModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Cédula</label>
-              <input type="text" value={form.cedula} onChange={set('cedula')} placeholder="1700000000"
+              <input
+                type="text"
+                inputMode="numeric"
+                value={form.cedula}
+                onChange={(e) => setForm((f) => ({ ...f, cedula: sanitizeCedula(e.target.value) }))}
+                placeholder="1700000000"
                 maxLength={10}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent" />
+                className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${
+                  cedulaError
+                    ? 'border-red-300 focus:ring-red-400'
+                    : form.cedula.length === 10
+                    ? 'border-emerald-300 focus:ring-emerald-400'
+                    : 'border-gray-200 focus:ring-sky-500'
+                }`}
+              />
+              {cedulaError && (
+                <p className="text-xs text-red-500 mt-1">{cedulaError}</p>
+              )}
+              {form.cedula.length === 10 && !cedulaError && (
+                <p className="text-xs text-emerald-600 mt-1">✓ Cédula válida</p>
+              )}
             </div>
           </div>
 
