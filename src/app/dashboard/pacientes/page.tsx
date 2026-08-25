@@ -61,8 +61,9 @@ const AVATAR_COLORS = [
   'bg-emerald-100 text-emerald-700', 'bg-amber-100 text-amber-700',
   'bg-rose-100 text-rose-700', 'bg-cyan-100 text-cyan-700',
 ]
-function avatarColor(id: string): string {
-  const n = id.charCodeAt(0) + id.charCodeAt(id.length - 1)
+function avatarColor(id: string | number): string {
+  const s = String(id)
+  const n = s.charCodeAt(0) + s.charCodeAt(s.length - 1)
   return AVATAR_COLORS[n % AVATAR_COLORS.length]
 }
 
