@@ -46,12 +46,15 @@ const authSlice = createSlice({
       state.refreshToken = null
       state.isAuthenticated = false
     },
+    clearError(state) {
+      state.error = null
+    },
   },
 })
 
 export const {
   loginRequest, loginSuccess, loginFailure,
   registerRequest, registerSuccess, registerFailure,
-  setTokens, logoutUser,
+  setTokens, logoutUser, clearError,
 } = authSlice.actions
 export default authSlice.reducer

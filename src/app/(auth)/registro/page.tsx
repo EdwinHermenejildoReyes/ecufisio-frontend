@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { clearError } from '@/store/auth/slices'
 import Link from 'next/link'
 import { Activity, Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react'
 
@@ -25,6 +26,8 @@ function PasswordRule({ label, valid }: { label: string; valid: boolean }) {
 export default function RegistroPage() {
   const dispatch = useDispatch()
   const { loading, error } = useSelector((state: any) => state.auth)
+
+  useEffect(() => { dispatch(clearError()) }, [dispatch])
 
   const [form, setForm] = useState({
     nombres: '', apellidos: '', email: '', telefono: '', password: '', re_password: '',

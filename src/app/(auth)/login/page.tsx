@@ -1,15 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
 import { Loader2, AlertCircle } from 'lucide-react'
+import { clearError } from '@/store/auth/slices'
 
 export default function LoginPage() {
   const dispatch = useDispatch()
   const { loading, error } = useSelector((state: any) => state.auth)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+
+  useEffect(() => { dispatch(clearError()) }, [dispatch])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
