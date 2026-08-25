@@ -181,6 +181,7 @@ export default function RegistroPage() {
                 </label>
                 <input
                   type="tel"
+                  maxLength={15}
                   value={form.telefono}
                   onChange={(e) => setForm((f) => ({ ...f, telefono: sanitizeTel(e.target.value) }))}
                   placeholder="+593 99 999 9999"

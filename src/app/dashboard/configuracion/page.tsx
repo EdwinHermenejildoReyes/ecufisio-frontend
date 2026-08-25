@@ -202,6 +202,7 @@ function TabClinica() {
             <input
               className="input"
               type="tel"
+              maxLength={15}
               value={form.telefono}
               onChange={(e) => setForm({ ...form, telefono: sanitizeTel(e.target.value) })}
             />
@@ -781,7 +782,7 @@ function EquipoModal({
           </Field>
         )}
         <Field label="Teléfono">
-          <input className="input" type="tel" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: sanitizeTel(e.target.value) })} />
+          <input className="input" type="tel" maxLength={15} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: sanitizeTel(e.target.value) })} />
         </Field>
         <Field label="Rol" required>
           <select className="input" value={form.rol} onChange={(e) => setForm({ ...form, rol: e.target.value })}>

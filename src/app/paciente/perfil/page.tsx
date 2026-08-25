@@ -130,7 +130,7 @@ export default function PerfilPacientePage() {
       {/* Contacto */}
       <Section title="Contacto">
         <Field label="Teléfono">
-          <input type="tel" className="input" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: sanitizeTel(e.target.value) })} />
+          <input type="tel" maxLength={15} className="input" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: sanitizeTel(e.target.value) })} />
         </Field>
         <Field label="Dirección">
           <textarea className="input resize-none min-h-[64px]" value={form.direccion} onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
