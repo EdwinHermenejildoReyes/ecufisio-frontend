@@ -268,11 +268,11 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="flex flex-wrap justify-center gap-6">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md hover:border-sky-100 transition-all group"
+                className="w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md hover:border-sky-100 transition-all group"
               >
                 <div className="w-12 h-12 bg-sky-50 group-hover:bg-sky-100 rounded-xl flex items-center justify-center mb-5 transition-colors">
                   <f.icon className="w-6 h-6 text-sky-600" />
@@ -330,9 +330,9 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="flex flex-wrap justify-center gap-8">
             {ECUADOR_CARDS.map((item) => (
-              <div key={item.title} className="bg-white/10 border border-white/20 rounded-2xl p-8 text-center backdrop-blur-sm">
+              <div key={item.title} className="w-full md:w-[calc(33.333%-22px)] bg-white/10 border border-white/20 rounded-2xl p-8 text-center backdrop-blur-sm">
                 <div className="w-14 h-14 bg-white/15 rounded-xl flex items-center justify-center mx-auto mb-5">
                   <item.icon className="w-7 h-7 text-white" />
                 </div>
