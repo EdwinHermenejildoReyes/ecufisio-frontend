@@ -38,4 +38,14 @@ export const configuracionRepository = {
     api.post(`/clinica/equipo/${id}/desactivar/`).then((r) => r.data),
   activarMiembro: (id) =>
     api.post(`/clinica/equipo/${id}/activar/`).then((r) => r.data),
+
+  // Disponibilidad (horarios)
+  listarDisponibilidad: (fisioId) =>
+    api.get('/agenda/disponibilidad/', { params: { fisioterapeuta: fisioId } }).then((r) => r.data),
+  crearDisponibilidad: (data) =>
+    api.post('/agenda/disponibilidad/', data).then((r) => r.data),
+  actualizarDisponibilidad: (id, data) =>
+    api.patch(`/agenda/disponibilidad/${id}/`, data).then((r) => r.data),
+  eliminarDisponibilidad: (id) =>
+    api.delete(`/agenda/disponibilidad/${id}/`),
 }

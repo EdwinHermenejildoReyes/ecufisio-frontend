@@ -7,7 +7,7 @@ import { es } from 'date-fns/locale'
 import {
   Plus, ChevronLeft, ChevronRight, X, Calendar as CalIcon,
   Clock, User, MapPin, FileText, CheckCircle2, XCircle,
-  AlertCircle, Loader2, RefreshCw, Search,
+  AlertCircle, Loader2, RefreshCw, Search, CalendarClock,
 } from 'lucide-react'
 import { agendaRepository } from '@/repositories/agenda'
 import { pacientesRepository } from '@/repositories/pacientes'
@@ -396,10 +396,14 @@ function DetalleCitaModal({ citaId, onClose, onUpdated }: {
   const [cita, setCita] = useState<CitaDetalle | null>(null)
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [reasignando, setReasignando] = useState(false)
+  const [nuevaFechaHora, setNuevaFechaHora] = useState('')
+  const [reasignarError, setReasignarError] = useState('')
 
   useEffect(() => {
     if (!citaId) return
     setLoading(true)
+    setReasignando(false)
     agendaRepository.obtenerCita(citaId)
       .then(setCita)
       .catch(() => setCita(null))
@@ -416,6 +420,32 @@ function DetalleCitaModal({ citaId, onClose, onUpdated }: {
       onUpdated()
       onClose()
     } catch {} finally { setActionLoading(null) }
+  }
+
+  const iniciarReasignacion = () => {
+    if (!cita) return
+    const local = new Date(cita.fecha_hora)
+    const offset = local.getTimezoneOffset()
+    const adjusted = new Date(local.getTime() - offset * 60000)
+    setNuevaFechaHora(adjusted.toISOString().slice(0, 16))
+    setReasignarError('')
+    setReasignando(true)
+  }
+
+  const guardarReasignacion = async () => {
+    if (!citaId || !nuevaFechaHora) return
+    setActionLoading('reasignar')
+    setReasignarError('')
+    try {
+      await agendaRepository.actualizarCita(citaId, { fecha_hora: nuevaFechaHora })
+      onUpdated()
+      onClose()
+    } catch (err: any) {
+      const d = err?.response?.data
+      if (d?.fecha_hora) setReasignarError(Array.isArray(d.fecha_hora) ? d.fecha_hora[0] : d.fecha_hora)
+      else if (d?.detail) setReasignarError(d.detail)
+      else setReasignarError('No se pudo reprogramar la cita.')
+    } finally { setActionLoading(null) }
   }
 
   if (!citaId) return null
@@ -501,53 +531,116 @@ function DetalleCitaModal({ citaId, onClose, onUpdated }: {
                 )}
               </div>
 
+              {/* Panel de reasignación */}
+              {reasignando && (
+                <div className="border border-sky-200 bg-sky-50 rounded-xl p-4 space-y-3">
+                  <p className="text-sm font-semibold text-sky-800 flex items-center gap-1.5">
+                    <CalendarClock className="w-4 h-4" />
+                    Reprogramar cita
+                  </p>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Nuevo día y hora</label>
+                    <input
+                      type="datetime-local"
+                      value={nuevaFechaHora}
+                      onChange={(e) => setNuevaFechaHora(e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent bg-white"
+                    />
+                  </div>
+                  {reasignarError && (
+                    <p className="text-xs text-red-600 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />{reasignarError}
+                    </p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={guardarReasignacion}
+                      disabled={!!actionLoading || !nuevaFechaHora}
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60"
+                    >
+                      {actionLoading === 'reasignar'
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <CheckCircle2 className="w-4 h-4" />}
+                      Guardar cambio
+                    </button>
+                    <button
+                      onClick={() => { setReasignando(false); setReasignarError('') }}
+                      disabled={!!actionLoading}
+                      className="px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg text-sm transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Acciones */}
-              {cita.estado === 'pendiente' && (
-                <div className="flex gap-2 pt-2 border-t border-gray-100">
+              {!reasignando && cita.estado === 'pendiente' && (
+                <div className="space-y-2 pt-2 border-t border-gray-100">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => doAction('confirmar')}
+                      disabled={!!actionLoading}
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
+                    >
+                      {actionLoading === 'confirmar'
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <CheckCircle2 className="w-4 h-4" />}
+                      Confirmar
+                    </button>
+                    <button
+                      onClick={() => doAction('cancelar')}
+                      disabled={!!actionLoading}
+                      className="flex-1 flex items-center justify-center gap-1.5 border border-red-200 text-red-600 hover:bg-red-50 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
+                    >
+                      {actionLoading === 'cancelar'
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <XCircle className="w-4 h-4" />}
+                      Cancelar cita
+                    </button>
+                  </div>
                   <button
-                    onClick={() => doAction('confirmar')}
+                    onClick={iniciarReasignacion}
                     disabled={!!actionLoading}
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
+                    className="w-full flex items-center justify-center gap-1.5 border border-sky-200 text-sky-700 hover:bg-sky-50 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
                   >
-                    {actionLoading === 'confirmar'
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <CheckCircle2 className="w-4 h-4" />}
-                    Confirmar
-                  </button>
-                  <button
-                    onClick={() => doAction('cancelar')}
-                    disabled={!!actionLoading}
-                    className="flex-1 flex items-center justify-center gap-1.5 border border-red-200 text-red-600 hover:bg-red-50 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
-                  >
-                    {actionLoading === 'cancelar'
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <XCircle className="w-4 h-4" />}
-                    Cancelar
+                    <CalendarClock className="w-4 h-4" />
+                    Reprogramar
                   </button>
                 </div>
               )}
 
-              {cita.estado === 'confirmada' && (
-                <div className="flex gap-2 pt-2 border-t border-gray-100">
+              {!reasignando && cita.estado === 'confirmada' && (
+                <div className="space-y-2 pt-2 border-t border-gray-100">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => doAction('completar')}
+                      disabled={!!actionLoading}
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
+                    >
+                      {actionLoading === 'completar'
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <CheckCircle2 className="w-4 h-4" />}
+                      Completar
+                    </button>
+                    <button
+                      onClick={() => doAction('cancelar')}
+                      disabled={!!actionLoading}
+                      className="flex-1 flex items-center justify-center gap-1.5 border border-red-200 text-red-600 hover:bg-red-50 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
+                    >
+                      {actionLoading === 'cancelar'
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <XCircle className="w-4 h-4" />}
+                      Cancelar cita
+                    </button>
+                  </div>
                   <button
-                    onClick={() => doAction('completar')}
+                    onClick={iniciarReasignacion}
                     disabled={!!actionLoading}
-                    className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
+                    className="w-full flex items-center justify-center gap-1.5 border border-sky-200 text-sky-700 hover:bg-sky-50 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
                   >
-                    {actionLoading === 'completar'
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <CheckCircle2 className="w-4 h-4" />}
-                    Completar
-                  </button>
-                  <button
-                    onClick={() => doAction('cancelar')}
-                    disabled={!!actionLoading}
-                    className="flex-1 flex items-center justify-center gap-1.5 border border-red-200 text-red-600 hover:bg-red-50 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
-                  >
-                    {actionLoading === 'cancelar'
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <XCircle className="w-4 h-4" />}
-                    Cancelar
+                    <CalendarClock className="w-4 h-4" />
+                    Reprogramar
                   </button>
                 </div>
               )}

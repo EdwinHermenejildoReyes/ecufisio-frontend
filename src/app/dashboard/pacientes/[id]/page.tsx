@@ -9,6 +9,7 @@ import {
   X, CheckCircle2, XCircle, Clock,
 } from 'lucide-react'
 import { pacientesRepository } from '@/repositories/pacientes'
+import { sanitizeCedula, validateCedula } from '@/utils/format'
 
 /* ── Tipos ── */
 interface PacienteDetalle {
@@ -60,6 +61,13 @@ interface PaqueteRow {
 /* ── Helpers ── */
 const SEXO_LABEL: Record<string, string> = { M: 'Masculino', F: 'Femenino', O: 'Otro' }
 
+const SEXO_CHOICES = [
+  { value: '', label: 'Prefiero no indicar' },
+  { value: 'M', label: 'Masculino' },
+  { value: 'F', label: 'Femenino' },
+  { value: 'O', label: 'Otro' },
+]
+
 const ESTADO_CITA: Record<string, { label: string; cls: string }> = {
   pendiente:  { label: 'Pendiente',  cls: 'bg-amber-100 text-amber-700' },
   confirmada: { label: 'Confirmada', cls: 'bg-sky-100 text-sky-700' },
@@ -96,6 +104,9 @@ function TabPerfil({ p, onUpdated }: { p: PacienteDetalle; onUpdated: () => void
     nombres: p.user.nombres,
     apellidos: p.user.apellidos,
     telefono: p.user.telefono,
+    cedula: p.cedula || '',
+    fecha_nacimiento: p.fecha_nacimiento || '',
+    sexo: p.sexo || '',
     ocupacion: p.ocupacion,
     direccion: p.direccion,
     contacto_emergencia_nombre: p.contacto_emergencia_nombre,
@@ -106,17 +117,29 @@ function TabPerfil({ p, onUpdated }: { p: PacienteDetalle; onUpdated: () => void
     notas: p.notas,
   })
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+
+  const cedulaError =
+    form.cedula.length > 0 && form.cedula.length < 10
+      ? 'Debe tener 10 dígitos'
+      : form.cedula.length === 10 && !validateCedula(form.cedula)
+      ? 'Cédula inválida — verifica el número'
+      : ''
 
   const set = (k: keyof typeof form) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }))
 
   const guardar = async () => {
+    if (cedulaError) { setSaveError(cedulaError); return }
     setSaving(true)
+    setSaveError('')
     try {
       await pacientesRepository.actualizar(p.id, form)
       onUpdated()
       setEditando(false)
+    } catch {
+      setSaveError('Error al guardar. Intenta de nuevo.')
     } finally {
       setSaving(false)
     }
@@ -193,6 +216,35 @@ function TabPerfil({ p, onUpdated }: { p: PacienteDetalle; onUpdated: () => void
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent" />
             </div>
           ))}
+
+          <p className="md:col-span-2 text-xs font-semibold text-gray-500 uppercase tracking-wide pt-2">Datos personales</p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Cédula</label>
+            <input
+              type="text" inputMode="numeric" maxLength={10}
+              value={form.cedula}
+              onChange={(e) => setForm((f) => ({ ...f, cedula: sanitizeCedula(e.target.value) }))}
+              className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:border-transparent ${
+                cedulaError ? 'border-red-300 focus:ring-red-300'
+                : form.cedula.length === 10 ? 'border-emerald-300 focus:ring-emerald-300'
+                : 'border-gray-200 focus:ring-sky-500'
+              }`}
+            />
+            {cedulaError && <p className="text-xs text-red-500 mt-1">{cedulaError}</p>}
+            {form.cedula.length === 10 && !cedulaError && <p className="text-xs text-emerald-600 mt-1">✓ Cédula válida</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de nacimiento</label>
+            <input type="date" value={form.fecha_nacimiento} onChange={set('fecha_nacimiento')}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sexo</label>
+            <select value={form.sexo} onChange={set('sexo')}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent bg-white">
+              {SEXO_CHOICES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
           <p className="md:col-span-2 text-xs font-semibold text-gray-500 uppercase tracking-wide pt-2">Historial médico</p>
           {[
             { k: 'antecedentes_medicos', label: 'Antecedentes médicos' },
@@ -206,6 +258,18 @@ function TabPerfil({ p, onUpdated }: { p: PacienteDetalle; onUpdated: () => void
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent resize-none" />
             </div>
           ))}
+          {saveError && <p className="md:col-span-2 text-sm text-red-600">{saveError}</p>}
+          <div className="md:col-span-2 flex gap-3 pt-2">
+            <button onClick={guardar} disabled={saving}
+              className="flex items-center gap-2 px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-60">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Guardar cambios
+            </button>
+            <button onClick={() => setEditando(false)} disabled={saving}
+              className="px-4 py-2.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg text-sm font-medium transition-colors">
+              Cancelar
+            </button>
+          </div>
         </div>
       )}
     </div>
