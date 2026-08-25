@@ -1,6 +1,13 @@
+import axios from 'axios'
 import api from './api'
 import { store } from '@/core/store'
 import { logoutUser, setTokens } from '@/store/auth/slices'
+
+// Instancia sin interceptores para la llamada de refresh (evita recursión)
+const refreshClient = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  headers: { 'Content-Type': 'application/json' },
+})
 
 let isRefreshing = false
 let pendingRequests = []
@@ -38,11 +45,12 @@ api.interceptors.response.use(
 
     try {
       const { auth } = store.getState()
-      const response = await api.post('/auth/jwt/refresh/', { refresh: auth.refreshToken })
-      const { access } = response.data
+      const response = await refreshClient.post('/auth/jwt/refresh/', { refresh: auth.refreshToken })
+      const { access, refresh } = response.data
 
-      store.dispatch(setTokens({ accessToken: access }))
+      store.dispatch(setTokens({ accessToken: access, refreshToken: refresh }))
       original.headers.Authorization = `JWT ${access}`
+      original._retry = true
       processQueue(null, access)
       return api(original)
     } catch (refreshError) {

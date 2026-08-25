@@ -38,7 +38,8 @@ const authSlice = createSlice({
       state.error = action.payload
     },
     setTokens(state, action) {
-      state.accessToken = action.payload.accessToken
+      if (action.payload.accessToken)  state.accessToken  = action.payload.accessToken
+      if (action.payload.refreshToken) state.refreshToken = action.payload.refreshToken
     },
     logoutUser(state) {
       state.user = null
