@@ -7,7 +7,7 @@ const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && !config.headers.Authorization) {
     try {
       const persisted = JSON.parse(localStorage.getItem('persist:ecufisio') || '{}')
       const auth = JSON.parse(persisted.auth || '{}')
