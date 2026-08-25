@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { Activity, ChevronLeft, ChevronRight, Check, Clock, Calendar, User, AlertCircle, Loader2 } from 'lucide-react'
 import { reservasRepository } from '@/repositories/reservas'
@@ -165,17 +165,53 @@ function PasoServicio({
 // ─── Paso 2: Fecha ────────────────────────────────────────────────────────────
 
 function PasoFecha({
-  diasDisponibles, selected, onSelect,
-}: { diasDisponibles: number[]; selected: Date | null; onSelect: (d: Date) => void }) {
+  diasDisponibles, selected, fisioId, servicioId, onSelect,
+}: {
+  diasDisponibles: number[]
+  selected: Date | null
+  fisioId: string
+  servicioId: string
+  onSelect: (d: Date, slots: string[]) => void
+}) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const [viewMonth, setViewMonth] = useState(startOfMonth(today))
+  const [checking, setChecking] = useState<string | null>(null)
+  const [noSlotsDate, setNoSlotsDate] = useState<Date | null>(null)
 
-  const firstDay = startOfMonth(viewMonth)
-  const offset = (firstDay.getDay() + 6) % 7 // lunes = 0
+  const offset = (startOfMonth(viewMonth).getDay() + 6) % 7
   const daysInMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate()
-
   const canPrev = viewMonth > startOfMonth(today)
+
+  const handleDayClick = async (day: Date) => {
+    const key = isoDate(day)
+    setChecking(key)
+    try {
+      const slots: string[] = await reservasRepository.obtenerSlots(fisioId, key, servicioId)
+      if (slots.length === 0) {
+        setNoSlotsDate(day)
+      } else {
+        onSelect(day, slots)
+      }
+    } catch {
+      setNoSlotsDate(day)
+    } finally {
+      setChecking(null)
+    }
+  }
+
+  if (diasDisponibles.length === 0) {
+    return (
+      <div>
+        <h2 className="text-lg font-bold text-gray-900 mb-4">Elige una fecha</h2>
+        <div className="text-center py-12">
+          <Calendar className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+          <p className="text-sm text-gray-400">Este fisioterapeuta aún no tiene horarios configurados.</p>
+          <p className="text-xs text-gray-400 mt-1">Contacta a la clínica directamente.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -183,20 +219,14 @@ function PasoFecha({
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         {/* Cabecera mes */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <button
-            onClick={() => setViewMonth(addMonths(viewMonth, -1))}
-            disabled={!canPrev}
-            className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-          >
+          <button onClick={() => setViewMonth(addMonths(viewMonth, -1))} disabled={!canPrev}
+            className="p-1 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">
             <ChevronLeft className="w-4 h-4" />
           </button>
           <span className="font-semibold text-gray-800 text-sm">
             {MESES[viewMonth.getMonth()]} {viewMonth.getFullYear()}
           </span>
-          <button
-            onClick={() => setViewMonth(addMonths(viewMonth, 1))}
-            className="p-1 rounded-lg hover:bg-gray-100"
-          >
+          <button onClick={() => setViewMonth(addMonths(viewMonth, 1))} className="p-1 rounded-lg hover:bg-gray-100">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -210,39 +240,72 @@ function PasoFecha({
 
         {/* Días */}
         <div className="grid grid-cols-7 p-2 gap-1">
-          {Array.from({ length: offset }).map((_, i) => (
-            <div key={`e-${i}`} />
-          ))}
+          {Array.from({ length: offset }).map((_, i) => <div key={`e-${i}`} />)}
           {Array.from({ length: daysInMonth }).map((_, i) => {
             const day = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), i + 1)
-            const weekday = (day.getDay() + 6) % 7 // lunes=0
+            const weekday = (day.getDay() + 6) % 7
             const available = diasDisponibles.includes(weekday)
             const isPast = day < today
+            const clickable = available && !isPast
             const isSelected = selected && isoDate(day) === isoDate(selected)
             const isToday = isoDate(day) === isoDate(today)
+            const isChecking = checking === isoDate(day)
 
             return (
               <button
                 key={i}
-                disabled={!available || isPast}
-                onClick={() => onSelect(day)}
+                disabled={!clickable || !!checking}
+                onClick={() => handleDayClick(day)}
                 className={`aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
                   isSelected
                     ? 'bg-sky-600 text-white'
-                    : available && !isPast
+                    : isChecking
+                    ? 'bg-sky-100 text-sky-500'
+                    : clickable
                     ? 'text-gray-900 hover:bg-sky-50 hover:text-sky-700 ' + (isToday ? 'ring-1 ring-sky-400' : '')
                     : 'text-gray-300 cursor-not-allowed'
                 }`}
               >
-                {i + 1}
+                {isChecking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : i + 1}
               </button>
             )
           })}
         </div>
       </div>
       <p className="text-xs text-gray-400 mt-2 text-center">
-        Solo se muestran los días en que el fisioterapeuta tiene disponibilidad.
+        Los días disponibles dependen del horario del fisioterapeuta.
       </p>
+
+      {/* Modal: sin disponibilidad */}
+      {noSlotsDate && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4"
+          onClick={() => setNoSlotsDate(null)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Calendar className="w-7 h-7 text-amber-500" />
+            </div>
+            <h3 className="font-bold text-gray-900 mb-2">Sin disponibilidad</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              No hay horarios disponibles el{' '}
+              <strong>
+                {noSlotsDate.toLocaleDateString('es-EC', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </strong>.
+              Por favor elige otra fecha.
+            </p>
+            <button
+              onClick={() => setNoSlotsDate(null)}
+              className="w-full bg-sky-600 hover:bg-sky-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
+            >
+              Elegir otra fecha
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -250,18 +313,11 @@ function PasoFecha({
 // ─── Paso 3: Hora ─────────────────────────────────────────────────────────────
 
 function PasoHora({
-  slots, loading, selected, onSelect, fecha,
+  slots, selected, onSelect, fecha,
 }: {
-  slots: string[]; loading: boolean; selected: string | null;
+  slots: string[]; selected: string | null;
   onSelect: (h: string) => void; fecha: Date | null
 }) {
-  if (loading) return (
-    <div className="flex flex-col items-center py-12 gap-3">
-      <Loader2 className="w-6 h-6 animate-spin text-sky-500" />
-      <p className="text-sm text-gray-500">Consultando disponibilidad…</p>
-    </div>
-  )
-
   return (
     <div>
       <h2 className="text-lg font-bold text-gray-900 mb-1">Elige un horario</h2>
@@ -416,7 +472,6 @@ export default function ReservarPage() {
   const [servicio, setServicio] = useState<Servicio | null>(null)
   const [fecha, setFecha] = useState<Date | null>(null)
   const [slots, setSlots] = useState<string[]>([])
-  const [loadingSlots, setLoadingSlots] = useState(false)
   const [hora, setHora] = useState<string | null>(null)
   const [form, setForm] = useState<FormData>({ nombres: '', apellidos: '', email: '', telefono: '', notas: '' })
   const [saving, setSaving] = useState(false)
@@ -436,25 +491,18 @@ export default function ReservarPage() {
       .finally(() => setLoadingInit(false))
   }, [id])
 
-  const cargarSlots = useCallback((f: Date, s: Servicio) => {
-    setLoadingSlots(true)
-    setSlots([])
-    setHora(null)
-    reservasRepository.obtenerSlots(id, isoDate(f), String(s.id))
-      .then(setSlots)
-      .catch(() => setSlots([]))
-      .finally(() => setLoadingSlots(false))
-  }, [id])
-
-  const handleSelectFecha = (d: Date) => {
+  const handleSelectFecha = (d: Date, availableSlots: string[]) => {
     setFecha(d)
+    setSlots(availableSlots)
     setHora(null)
-    if (servicio) cargarSlots(d, servicio)
+    setStep(2)
   }
 
   const handleSelectServicio = (s: Servicio) => {
     setServicio(s)
-    if (fecha) cargarSlots(fecha, s)
+    setFecha(null)
+    setSlots([])
+    setHora(null)
   }
 
   const handleSubmit = async () => {
@@ -551,18 +599,20 @@ export default function ReservarPage() {
                 <PasoFecha
                   diasDisponibles={fisio.dias_disponibles}
                   selected={fecha}
+                  fisioId={id}
+                  servicioId={String(servicio!.id)}
                   onSelect={handleSelectFecha}
                 />
               )}
               {step === 2 && (
-                <PasoHora slots={slots} loading={loadingSlots} selected={hora} onSelect={setHora} fecha={fecha} />
+                <PasoHora slots={slots} selected={hora} onSelect={setHora} fecha={fecha} />
               )}
               {step === 3 && (
                 <PasoDatos form={form} setForm={setForm} onSubmit={handleSubmit} saving={saving} error={error} />
               )}
 
               {/* Navigation */}
-              {step < 3 && (
+              {step < 3 && step !== 1 && (
                 <div className="flex justify-between mt-6 pt-5 border-t border-gray-100">
                   <button
                     onClick={() => setStep(step - 1)}
@@ -577,6 +627,16 @@ export default function ReservarPage() {
                     className="flex items-center gap-1 bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {step === 2 ? 'Continuar' : 'Siguiente'} <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              {step === 1 && (
+                <div className="flex justify-start mt-6 pt-5 border-t border-gray-100">
+                  <button
+                    onClick={() => setStep(0)}
+                    className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Atrás
                   </button>
                 </div>
               )}
