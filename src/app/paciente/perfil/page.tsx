@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { pacientesRepository } from '@/repositories/pacientes'
 import { getErrorMessage } from '@/utils/errorMessages'
-import { sanitizeTel } from '@/utils/format'
+import { sanitizeTel, sanitizeCedula, validateCedula } from '@/utils/format'
 import { logoutUser } from '@/store/auth/slices'
 import { LogOut } from 'lucide-react'
 
@@ -59,9 +59,17 @@ export default function PerfilPacientePage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const cedulaError =
+    form.cedula.length > 0 && form.cedula.length < 10
+      ? 'Debe tener 10 dígitos'
+      : form.cedula.length === 10 && !validateCedula(form.cedula)
+      ? 'Cédula inválida — verifica el número'
+      : ''
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!pacienteId) return
+    if (cedulaError) { setError(cedulaError); return }
     setSaving(true)
     setError('')
     setSuccess(false)
@@ -112,7 +120,17 @@ export default function PerfilPacientePage() {
           <input className="input" value={form.apellidos} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} />
         </Field>
         <Field label="Cédula">
-          <input className="input" value={form.cedula} onChange={(e) => setForm({ ...form, cedula: e.target.value })} maxLength={10} />
+          <input
+            className={`input ${cedulaError ? 'border-red-300 ring-red-300' : form.cedula.length === 10 ? 'border-emerald-300' : ''}`}
+            inputMode="numeric"
+            value={form.cedula}
+            onChange={(e) => setForm({ ...form, cedula: sanitizeCedula(e.target.value) })}
+            maxLength={10}
+          />
+          {cedulaError && <p className="text-xs text-red-500 mt-1">{cedulaError}</p>}
+          {form.cedula.length === 10 && !cedulaError && (
+            <p className="text-xs text-emerald-600 mt-1">✓ Cédula válida</p>
+          )}
         </Field>
         <Field label="Fecha de nacimiento">
           <input type="date" className="input" value={form.fecha_nacimiento} onChange={(e) => setForm({ ...form, fecha_nacimiento: e.target.value })} />
