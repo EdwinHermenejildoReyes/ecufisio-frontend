@@ -82,6 +82,12 @@ function PasoServicio({
   return (
     <div>
       <h2 className="text-lg font-bold text-gray-900 mb-4">¿Qué servicio necesitas?</h2>
+      {servicios.length === 0 && (
+        <div className="text-center py-10 text-gray-400">
+          <p className="text-sm">No hay servicios disponibles en este momento.</p>
+          <p className="text-xs mt-1">Por favor contacta a la clínica directamente.</p>
+        </div>
+      )}
       <div className="space-y-3">
         {servicios.map((s) => (
           <button
