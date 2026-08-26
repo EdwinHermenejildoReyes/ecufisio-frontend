@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState } from 'react'
 import {
   Calendar,
@@ -197,30 +198,37 @@ export default function LandingPage() {
       </nav>
 
       {/* ═══ HERO ═══ */}
-      <section className="relative pt-16 min-h-screen flex items-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-cyan-50" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(14,165,233,0.1),transparent_60%)]" />
+      <section className="relative pt-16 h-screen flex items-center overflow-hidden">
+        {/* Imagen de fondo completa */}
+        <Image
+          src="/fondo-hero.png"
+          alt=""
+          fill
+          className="object-cover object-center"
+          priority
+        />
 
-        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-24 lg:py-32 w-full">
-          <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 bg-sky-50 border border-sky-100 text-sky-700 px-4 py-2 rounded-full text-sm font-medium mb-8">
+        {/* Texto */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="max-w-xl lg:max-w-2xl">
+            <div className="inline-flex items-center gap-2 bg-white/70 backdrop-blur-sm border border-sky-100 text-sky-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
               <Globe className="w-4 h-4" />
               Diseñado para clínicas de fisioterapia en Ecuador
             </div>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight mb-6 text-gray-900">
+            <h1 className="text-5xl sm:text-6xl xl:text-7xl font-bold leading-tight mb-6 text-gray-900">
               Gestiona tu clínica{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-cyan-500">
                 con facilidad
               </span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
+            <p className="text-lg sm:text-xl text-gray-600 mb-8 leading-relaxed">
               Agenda, expedientes clínicos, rutinas de ejercicio y comunicación con pacientes.
               Todo en una plataforma pensada para Ecuador.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-20">
+            <div className="flex flex-col sm:flex-row gap-4 mb-12">
               <Link
                 href="/registro"
                 className="inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-8 py-4 rounded-xl text-lg font-bold transition-all hover:scale-105 shadow-lg shadow-sky-600/20"
@@ -230,24 +238,24 @@ export default function LandingPage() {
               </Link>
               <a
                 href="#funcionalidades"
-                className="inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-8 py-4 rounded-xl text-lg font-semibold transition-all border border-gray-200 shadow-sm"
+                className="inline-flex items-center justify-center gap-2 bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 px-8 py-4 rounded-xl text-lg font-semibold transition-all border border-gray-200 shadow-sm"
               >
                 Ver funcionalidades
               </a>
             </div>
 
-            <div className="grid grid-cols-3 gap-8 max-w-sm mx-auto">
+            <div className="grid grid-cols-3 gap-8 max-w-sm">
               <div>
                 <p className="text-3xl font-bold text-sky-600">100%</p>
-                <p className="text-xs text-gray-400 mt-1">Web, sin instalar</p>
+                <p className="text-xs text-gray-500 mt-1">Web, sin instalar</p>
               </div>
               <div>
                 <p className="text-3xl font-bold text-sky-600">PWA</p>
-                <p className="text-xs text-gray-400 mt-1">Portal del paciente</p>
+                <p className="text-xs text-gray-500 mt-1">Portal del paciente</p>
               </div>
               <div>
                 <p className="text-3xl font-bold text-sky-600">24/7</p>
-                <p className="text-xs text-gray-400 mt-1">Acceso online</p>
+                <p className="text-xs text-gray-500 mt-1">Acceso online</p>
               </div>
             </div>
           </div>
