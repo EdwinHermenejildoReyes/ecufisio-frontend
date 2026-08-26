@@ -6,7 +6,7 @@ import Providers from './providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Ecufisio — Gestión de Fisioterapia',
+  title: 'FisioCore — Gestión de Fisioterapia',
   description: 'Software de gestión para clínicas de fisioterapia en Ecuador',
   manifest: '/manifest.json',
   themeColor: '#0ea5e9',

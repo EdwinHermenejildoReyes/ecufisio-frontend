@@ -23,7 +23,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-md bg-white rounded-xl shadow-sm p-8">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-sky-600">ecufisio</h1>
+          <h1 className="text-2xl font-bold"><span className="text-sky-600">Fisio</span>Core</h1>
           <p className="text-gray-500 mt-1 text-sm">Ingresa a tu cuenta</p>
         </div>
 

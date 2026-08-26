@@ -10,7 +10,7 @@ const storage = typeof window !== 'undefined'
   : createNoopStorage()
 
 const persistConfig = {
-  key: 'ecufisio',
+  key: 'fisiocore',
   storage,
   whitelist: ['auth'],
 }

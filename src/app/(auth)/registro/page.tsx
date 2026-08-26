@@ -69,7 +69,7 @@ export default function RegistroPage() {
           <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
             <Activity className="w-4 h-4" />
           </div>
-          <span className="text-xl font-bold">ecufisio</span>
+          <span className="text-xl font-bold"><span className="text-sky-600">Fisio</span>Core</span>
         </div>
 
         <div>

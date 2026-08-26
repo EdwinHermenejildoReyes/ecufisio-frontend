@@ -9,7 +9,7 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined' && !config._retry) {
     try {
-      const persisted = JSON.parse(localStorage.getItem('persist:ecufisio') || '{}')
+      const persisted = JSON.parse(localStorage.getItem('persist:fisiocore') || '{}')
       const auth = JSON.parse(persisted.auth || '{}')
       if (auth.accessToken) {
         config.headers.Authorization = `JWT ${auth.accessToken}`

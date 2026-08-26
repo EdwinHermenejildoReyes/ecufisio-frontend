@@ -151,7 +151,7 @@ export default function LandingPage() {
               <Activity className="w-4 h-4 text-white" />
             </div>
             <span className="text-xl font-bold">
-              <span className="text-sky-600">ecu</span>fisio
+              <span className="text-sky-600">Fisio</span>Core
             </span>
           </div>
 
@@ -402,7 +402,7 @@ export default function LandingPage() {
                   ))}
                 </ul>
                 <Link
-                  href={plan.cta === 'Contactar ventas' ? 'mailto:hola@ecufisio.com' : '/registro'}
+                  href={plan.cta === 'Contactar ventas' ? 'mailto:hola@fisiocore.com' : '/registro'}
                   className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${
                     plan.highlighted
                       ? 'bg-white text-sky-600 hover:bg-sky-50'
@@ -429,7 +429,7 @@ export default function LandingPage() {
             <span className="text-sky-600">tu clínica?</span>
           </h2>
           <p className="text-gray-500 text-lg mb-10 max-w-xl mx-auto leading-relaxed">
-            Únete a las clínicas que ya gestionan sus pacientes y citas con ecufisio.
+            Únete a las clínicas que ya gestionan sus pacientes y citas con FisioCore.
             Empieza gratis hoy, sin compromisos.
           </p>
           <Link
@@ -451,18 +451,18 @@ export default function LandingPage() {
                 <Activity className="w-3.5 h-3.5 text-white" />
               </div>
               <span className="font-bold text-lg">
-                <span className="text-sky-600">ecu</span>fisio
+                <span className="text-sky-600">Fisio</span>Core
               </span>
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-gray-400">
-              <span>&copy; {new Date().getFullYear()} ecufisio. Todos los derechos reservados.</span>
+              <span>&copy; {new Date().getFullYear()} FisioCore. Todos los derechos reservados.</span>
               <span className="hidden sm:inline">·</span>
               <Link href="/privacidad" className="hover:text-sky-600 transition-colors">Privacidad</Link>
               <span>·</span>
               <Link href="/terminos" className="hover:text-sky-600 transition-colors">Términos</Link>
               <span>·</span>
-              <a href="mailto:hola@ecufisio.com" className="hover:text-sky-600 transition-colors">Contacto</a>
+              <a href="mailto:hola@fisiocore.com" className="hover:text-sky-600 transition-colors">Contacto</a>
             </div>
           </div>
         </div>

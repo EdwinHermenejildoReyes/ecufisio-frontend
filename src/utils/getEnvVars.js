@@ -1,6 +1,6 @@
 function warnIfMissing(value, key) {
   if (!value && process.env.NODE_ENV !== 'test') {
-    console.warn(`[ecufisio] Variable de entorno no definida: ${key}`)
+    console.warn(`[FisioCore] Variable de entorno no definida: ${key}`)
   }
   return value || ''
 }
