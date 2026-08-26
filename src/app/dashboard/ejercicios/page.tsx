@@ -38,7 +38,7 @@ const CATEGORIAS = [
   { value: 'funcional',    label: 'Funcional' },
 ]
 
-export const CAT_COLOR: Record<string, string> = {
+const CAT_COLOR: Record<string, string> = {
   fuerza:       'bg-red-100 text-red-700',
   flexibilidad: 'bg-emerald-100 text-emerald-700',
   equilibrio:   'bg-blue-100 text-blue-700',
