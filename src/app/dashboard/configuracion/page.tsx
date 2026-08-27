@@ -806,9 +806,22 @@ function CompartirModal({ miembro, onClose }: { miembro: Miembro; onClose: () =>
   const [copiedIframe, setCopiedIframe] = useState(false)
 
   const copy = async (text: string, setCopied: (v: boolean) => void) => {
-    await navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text)
+      } else {
+        const el = document.createElement('textarea')
+        el.value = text
+        el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0'
+        document.body.appendChild(el)
+        el.focus()
+        el.select()
+        document.execCommand('copy')
+        document.body.removeChild(el)
+      }
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {}
   }
 
   const downloadQR = async () => {
