@@ -654,7 +654,9 @@ function DetalleCitaModal({ citaId, onClose, onUpdated }: {
 
 /* ── Página principal ── */
 export default function AgendaPage() {
-  const [view, setView] = useState<View>(Views.WEEK)
+  const [view, setView] = useState<View>(() =>
+    typeof window !== 'undefined' && window.innerWidth < 768 ? Views.DAY : Views.WEEK
+  )
   const [date, setDate] = useState(new Date())
   const [events, setEvents] = useState<CitaEvento[]>([])
   const [loading, setLoading] = useState(false)
@@ -775,75 +777,79 @@ export default function AgendaPage() {
   return (
     <div className="flex flex-col h-full">
       {/* ── Barra superior ── */}
-      <div className="bg-white border-b border-gray-100 px-6 py-4 space-y-3">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          {/* Navegación */}
-          <div className="flex items-center gap-2">
-            <button onClick={irAnterior} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+      <div className="bg-white border-b border-gray-100 px-4 sm:px-6 py-3 space-y-2.5">
+
+        {/* Fila 1: navegación de fecha */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 min-w-0">
+            <button onClick={irAnterior} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors shrink-0">
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900 capitalize min-w-[200px] text-center">
+            <h1 className="text-sm sm:text-base font-semibold text-gray-900 capitalize text-center truncate px-1">
               {tituloFecha()}
             </h1>
-            <button onClick={irSiguiente} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+            <button onClick={irSiguiente} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors shrink-0">
               <ChevronRight className="w-5 h-5" />
             </button>
-            <button onClick={irHoy} className="px-3 py-1.5 text-sm font-medium text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors">
+            <button onClick={irHoy} className="px-2.5 py-1 text-xs sm:text-sm font-medium text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors shrink-0">
               Hoy
             </button>
           </div>
 
-          {/* Controles */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
-              {([Views.DAY, Views.WEEK, Views.MONTH] as View[]).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  className={`px-3 py-1.5 font-medium transition-colors ${
-                    view === v ? 'bg-sky-600 text-white' : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {v === Views.DAY ? 'Día' : v === Views.WEEK ? 'Semana' : 'Mes'}
-                </button>
-              ))}
-            </div>
-
-            {fisioterapeutas.length > 0 && (
-              <select
-                value={filtroFisio}
-                onChange={(e) => setFiltroFisio(e.target.value)}
-                className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-              >
-                <option value="">Todos los fisios</option>
-                {fisioterapeutas.map((f) => (
-                  <option key={f.id} value={f.id}>{f.nombre_completo}</option>
-                ))}
-              </select>
-            )}
-
-            <button
-              onClick={refresh}
-              disabled={loading}
-              className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50"
-              title="Actualizar"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-
-            <button
-              onClick={() => { setSlotSeleccionado(undefined); setModalNuevaCita(true) }}
-              className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-            >
-              <Plus className="w-4 h-4" />Nueva cita
-            </button>
-          </div>
+          {/* Nueva cita siempre visible */}
+          <button
+            onClick={() => { setSlotSeleccionado(undefined); setModalNuevaCita(true) }}
+            className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Nueva cita</span>
+            <span className="sm:hidden">Nueva</span>
+          </button>
         </div>
 
-        {/* KPIs de hoy */}
+        {/* Fila 2: vista + filtros */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs sm:text-sm">
+            {([Views.DAY, Views.WEEK, Views.MONTH] as View[]).map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`px-2.5 py-1.5 font-medium transition-colors ${
+                  view === v ? 'bg-sky-600 text-white' : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {v === Views.DAY ? 'Día' : v === Views.WEEK ? 'Semana' : 'Mes'}
+              </button>
+            ))}
+          </div>
+
+          {fisioterapeutas.length > 0 && (
+            <select
+              value={filtroFisio}
+              onChange={(e) => setFiltroFisio(e.target.value)}
+              className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent flex-1 sm:flex-none min-w-0"
+            >
+              <option value="">Todos los fisios</option>
+              {fisioterapeutas.map((f) => (
+                <option key={f.id} value={f.id}>{f.nombre_completo}</option>
+              ))}
+            </select>
+          )}
+
+          <button
+            onClick={refresh}
+            disabled={loading}
+            className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 ml-auto sm:ml-0"
+            title="Actualizar"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+
+        {/* KPIs de hoy — scroll horizontal en móvil */}
         {resumen && (
-          <div className="flex items-center gap-5 text-sm pt-0.5">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Hoy</span>
+          <div className="flex items-center gap-4 overflow-x-auto pb-0.5 scrollbar-none">
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide shrink-0">Hoy</span>
             {[
               { label: 'total', value: resumen.total, color: 'text-gray-700' },
               { label: 'pendientes', value: resumen.pendientes, color: 'text-amber-600' },
@@ -851,8 +857,8 @@ export default function AgendaPage() {
               { label: 'completadas', value: resumen.completadas, color: 'text-emerald-600' },
               { label: 'canceladas', value: resumen.canceladas, color: 'text-red-500' },
             ].map(({ label, value, color }) => (
-              <div key={label} className="flex items-baseline gap-1">
-                <span className={`font-bold text-base ${color}`}>{value}</span>
+              <div key={label} className="flex items-baseline gap-1 shrink-0">
+                <span className={`font-bold text-sm ${color}`}>{value}</span>
                 <span className="text-gray-400 text-xs">{label}</span>
               </div>
             ))}

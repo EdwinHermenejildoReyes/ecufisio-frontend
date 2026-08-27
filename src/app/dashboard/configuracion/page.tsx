@@ -118,7 +118,7 @@ export default function ConfiguracionPage() {
   const [tab, setTab] = useState('clinica')
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Configuración</h1>
         <p className="text-sm text-gray-500 mt-0.5">Gestiona la información de la clínica y el equipo</p>
@@ -701,55 +701,70 @@ function TabEquipo() {
           <p className="text-sm text-gray-400 text-center py-10">No hay miembros del equipo.</p>
         )}
         {equipo.map((m) => (
-          <div key={m.id} className="flex items-center gap-4 px-5 py-4">
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-              style={{ background: avatarBg(m.email) }}
-            >
-              {initials(m.nombres, m.apellidos)}
+          <div key={m.id} className="px-4 sm:px-5 py-4">
+            <div className="flex items-start gap-3">
+              {/* Avatar */}
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5"
+                style={{ background: avatarBg(m.email) }}
+              >
+                {initials(m.nombres, m.apellidos)}
+              </div>
+
+              {/* Info + acciones */}
+              <div className="flex-1 min-w-0">
+                {/* Nombre + badge */}
+                <div className="flex items-start gap-2 flex-wrap">
+                  <p className="text-sm font-medium text-gray-900 leading-snug">{m.nombre_completo}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${ROL_COLOR[m.rol] || 'bg-gray-100 text-gray-600'}`}>
+                    {ROL_LABEL[m.rol] || m.rol}
+                  </span>
+                  {!m.is_active && (
+                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full shrink-0">
+                      Inactivo
+                    </span>
+                  )}
+                </div>
+
+                {/* Email */}
+                <p className="text-xs text-gray-400 mt-0.5 truncate">
+                  {m.email}{m.telefono && ` · ${m.telefono}`}
+                </p>
+
+                {/* Botones de acción */}
+                <div className="flex items-center gap-3 mt-2 flex-wrap">
+                  {m.rol === 'fisioterapeuta' && m.is_active && (
+                    <>
+                      <button
+                        onClick={() => setHorariosMiembro(m)}
+                        className="text-xs text-sky-600 hover:text-sky-700 font-medium"
+                      >
+                        Horarios
+                      </button>
+                      <button
+                        onClick={() => setCompartirMiembro(m)}
+                        className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                      >
+                        <Share2 className="w-3 h-3" />
+                        Compartir
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => setModal({ open: true, data: m })}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => toggleActivo(m)}
+                    className={`text-xs font-medium ${m.is_active ? 'text-red-500 hover:text-red-600' : 'text-green-600 hover:text-green-700'}`}
+                  >
+                    {m.is_active ? 'Desactivar' : 'Activar'}
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900">{m.nombre_completo}</p>
-              <p className="text-xs text-gray-400">{m.email}{m.telefono && ` · ${m.telefono}`}</p>
-            </div>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROL_COLOR[m.rol] || 'bg-gray-100 text-gray-600'}`}>
-              {ROL_LABEL[m.rol] || m.rol}
-            </span>
-            {!m.is_active && (
-              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                Inactivo
-              </span>
-            )}
-            {m.rol === 'fisioterapeuta' && m.is_active && (
-              <>
-                <button
-                  onClick={() => setHorariosMiembro(m)}
-                  className="text-sm text-sky-600 hover:underline"
-                >
-                  Horarios
-                </button>
-                <button
-                  onClick={() => setCompartirMiembro(m)}
-                  title="Compartir página de reservas"
-                  className="flex items-center gap-1 text-sm text-indigo-600 hover:underline"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  Compartir
-                </button>
-              </>
-            )}
-            <button
-              onClick={() => setModal({ open: true, data: m })}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              Editar
-            </button>
-            <button
-              onClick={() => toggleActivo(m)}
-              className={`text-sm hover:underline ${m.is_active ? 'text-red-500' : 'text-green-600'}`}
-            >
-              {m.is_active ? 'Desactivar' : 'Activar'}
-            </button>
           </div>
         ))}
       </div>
