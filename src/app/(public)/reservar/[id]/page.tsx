@@ -595,7 +595,7 @@ export default function ReservarPage() {
           <Activity className="w-4 h-4 text-white" />
         </div>
         <span className="font-bold text-gray-800">
-          <span className="text-sky-600">ecu</span>fisio
+          <span className="text-sky-600">Fisio</span>Core
         </span>
         {fisio && (
           <>
