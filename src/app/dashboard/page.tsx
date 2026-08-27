@@ -109,22 +109,23 @@ export default function DashboardPage() {
   })
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-5 max-w-7xl mx-auto">
 
       {/* ─── Header ─── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 capitalize">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 capitalize truncate">
             Hola, {nombre}
           </h1>
-          <p className="text-gray-400 text-sm mt-0.5 capitalize">{fechaHoy}</p>
+          <p className="text-gray-400 text-xs sm:text-sm mt-0.5 capitalize">{fechaHoy}</p>
         </div>
         <Link
           href="/dashboard/agenda"
-          className="inline-flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          className="inline-flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white px-3 py-2 sm:px-4 rounded-lg text-sm font-medium transition-colors shrink-0"
         >
           <Plus className="w-4 h-4" />
-          Nueva cita
+          <span className="hidden sm:inline">Nueva cita</span>
+          <span className="sm:hidden">Nueva</span>
         </Link>
       </div>
 
