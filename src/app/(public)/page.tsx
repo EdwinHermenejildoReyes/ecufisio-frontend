@@ -216,14 +216,14 @@ export default function LandingPage() {
               Diseñado para clínicas de fisioterapia en Ecuador
             </div>
 
-            <h1 className="text-5xl sm:text-6xl xl:text-7xl font-bold leading-tight mb-6 text-gray-900">
+            <h1 className="text-4xl sm:text-5xl xl:text-6xl font-bold leading-tight mb-5 text-gray-900">
               Gestiona tu clínica{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-cyan-500">
                 con facilidad
               </span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-gray-600 mb-8 leading-relaxed">
+            <p className="text-base sm:text-lg text-gray-600 mb-6 leading-relaxed">
               Agenda, expedientes clínicos, rutinas de ejercicio y comunicación con pacientes.
               Todo en una plataforma pensada para Ecuador.
             </p>
@@ -244,17 +244,17 @@ export default function LandingPage() {
               </a>
             </div>
 
-            <div className="grid grid-cols-3 gap-8 max-w-sm">
+            <div className="flex gap-6 sm:gap-8">
               <div>
-                <p className="text-3xl font-bold text-sky-600">100%</p>
+                <p className="text-2xl sm:text-3xl font-bold text-sky-600">100%</p>
                 <p className="text-xs text-gray-500 mt-1">Web, sin instalar</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-sky-600">PWA</p>
+                <p className="text-2xl sm:text-3xl font-bold text-sky-600">PWA</p>
                 <p className="text-xs text-gray-500 mt-1">Portal del paciente</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-sky-600">24/7</p>
+                <p className="text-2xl sm:text-3xl font-bold text-sky-600">24/7</p>
                 <p className="text-xs text-gray-500 mt-1">Acceso online</p>
               </div>
             </div>

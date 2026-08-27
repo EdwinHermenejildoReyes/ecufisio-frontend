@@ -35,10 +35,13 @@ function* handleRegister(action) {
   } catch (error) {
     const data = error?.response?.data
     let msg = 'No se pudo completar el registro'
-    if (data?.email)           msg = `Correo: ${data.email[0]}`
-    else if (data?.password)   msg = `Contraseña: ${data.password[0]}`
+    if (data?.email)              msg = `Correo: ${data.email[0]}`
+    else if (data?.password)      msg = `Contraseña: ${data.password[0]}`
+    else if (data?.re_password)   msg = `Contraseña: ${data.re_password[0]}`
+    else if (data?.nombres)       msg = `Nombres: ${data.nombres[0]}`
+    else if (data?.apellidos)     msg = `Apellidos: ${data.apellidos[0]}`
     else if (data?.non_field_errors) msg = data.non_field_errors[0]
-    else if (data?.detail)     msg = data.detail
+    else if (data?.detail)        msg = data.detail
     yield put(registerFailure(msg))
   }
 }
